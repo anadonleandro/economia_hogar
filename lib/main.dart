@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'screens/app_shell.dart';
+
 void main() {
   runApp(const MyApp());
 }
@@ -12,24 +14,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Economía del Hogar',
       theme: ThemeData(colorScheme: .fromSeed(seedColor: Colors.deepPurple)),
-      home: const MyHomePage(title: 'Economía del Hogar'),
-    );
-  }
-}
-
-class MyHomePage extends StatelessWidget {
-  const MyHomePage({super.key, required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(title),
-      ),
-      body: const Center(child: Text('Todavía no hay movimientos.')),
+      home: const AppShell(),
     );
   }
 }
