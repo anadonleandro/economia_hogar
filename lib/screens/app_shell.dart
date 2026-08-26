@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/movimiento.dart';
+import '../services/resumen_mensual_calculator.dart';
 import 'home_screen.dart';
 import 'movements_screen.dart';
 import 'new_movement_screen.dart';
@@ -14,17 +15,29 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> {
+  static const ResumenMensualCalculator _summaryCalculator =
+      ResumenMensualCalculator();
+
   final List<Movimiento> _movements = [];
 
   int _selectedIndex = 0;
 
   static const List<String> _titles = ['Inicio', 'Movimientos', 'Resumen'];
 
-  List<Widget> get _screens => [
-    const HomeScreen(),
-    MovementsScreen(movements: List.unmodifiable(_movements)),
-    const SummaryScreen(),
-  ];
+  List<Widget> get _screens {
+    final currentPeriod = DateTime.now();
+    final summary = _summaryCalculator.calcular(
+      movimientos: _movements,
+      anio: currentPeriod.year,
+      mes: currentPeriod.month,
+    );
+
+    return [
+      HomeScreen(summary: summary, period: currentPeriod),
+      MovementsScreen(movements: List.unmodifiable(_movements)),
+      const SummaryScreen(),
+    ];
+  }
 
   void _selectDestination(int index) {
     setState(() {

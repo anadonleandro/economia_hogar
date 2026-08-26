@@ -273,4 +273,31 @@ void main() {
     expect(find.text(r'- $ 45.300,50'), findsOneWidget);
     expect(find.text('Nuevo movimiento'), findsOneWidget);
   });
+
+  testWidgets('Actualiza el resumen mensual de Inicio', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const MyApp());
+
+    expect(find.text('0 movimientos en el mes'), findsOneWidget);
+
+    await tester.tap(find.text('Nuevo movimiento'));
+    await tester.pumpAndSettle();
+
+    final amountField = find.widgetWithText(TextFormField, 'Monto');
+    final saveButton = find.text('Guardar');
+
+    await tester.enterText(amountField, '1000');
+    await tester.ensureVisible(saveButton);
+    await tester.tap(saveButton);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Inicio'));
+    await tester.pumpAndSettle();
+
+    expect(find.text(r'$ 0,00'), findsOneWidget);
+    expect(find.text(r'$ 1.000,00'), findsOneWidget);
+    expect(find.text(r'- $ 1.000,00'), findsOneWidget);
+    expect(find.text('1 movimiento en el mes'), findsOneWidget);
+  });
 }
