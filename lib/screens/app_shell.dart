@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import 'movements_screen.dart';
 import 'summary_screen.dart';
+import 'new_movement_screen.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -28,6 +29,12 @@ class _AppShellState extends State<AppShell> {
     });
   }
 
+  void _openNewMovementForm() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (context) => const NewMovementScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -36,6 +43,11 @@ class _AppShellState extends State<AppShell> {
         title: Text(_titles[_selectedIndex]),
       ),
       body: _screens[_selectedIndex],
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _openNewMovementForm,
+        icon: const Icon(Icons.add),
+        label: const Text('Nuevo movimiento'),
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: _selectDestination,
