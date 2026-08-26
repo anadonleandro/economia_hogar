@@ -1,25 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../constants/month_names.dart';
 import '../models/movimiento.dart';
 import '../models/tipo_movimiento.dart';
 import '../utils/monto_formatter.dart';
+import '../widgets/selection_filter_menu.dart';
 
 enum _MovementTypeFilter { all, income, expense }
-
-const List<String> _monthNames = [
-  'Enero',
-  'Febrero',
-  'Marzo',
-  'Abril',
-  'Mayo',
-  'Junio',
-  'Julio',
-  'Agosto',
-  'Septiembre',
-  'Octubre',
-  'Noviembre',
-  'Diciembre',
-];
 
 class MovementsScreen extends StatefulWidget {
   const MovementsScreen({
@@ -59,7 +46,7 @@ class _MovementsScreenState extends State<MovementsScreen> {
   }
 
   String get _selectedMonthLabel {
-    return _selectedMonth == 0 ? 'Todos' : _monthNames[_selectedMonth - 1];
+    return _selectedMonth == 0 ? 'Todos' : monthNames[_selectedMonth - 1];
   }
 
   String get _selectedYearLabel {
@@ -156,14 +143,14 @@ class _MovementsScreenState extends State<MovementsScreen> {
                 spacing: 8,
                 children: [
                   Expanded(
-                    child: _FilterMenu<_MovementTypeFilter>(
+                    child: SelectionFilterMenu<_MovementTypeFilter>(
                       label: 'Tipo',
                       tooltip: 'Filtrar por tipo',
                       selectedValue: _selectedTypeFilter,
                       selectedLabel: _selectedTypeLabel,
                       options: [
                         for (final filter in _MovementTypeFilter.values)
-                          _FilterOption(
+                          SelectionOption(
                             value: filter,
                             label: switch (filter) {
                               _MovementTypeFilter.all => 'Todos',
@@ -177,22 +164,22 @@ class _MovementsScreenState extends State<MovementsScreen> {
                     ),
                   ),
                   Expanded(
-                    child: _FilterMenu<int>(
+                    child: SelectionFilterMenu<int>(
                       label: 'Mes',
                       tooltip: 'Filtrar por mes',
                       menuConstraints: const BoxConstraints(maxHeight: 320),
                       selectedValue: _selectedMonth,
                       selectedLabel: _selectedMonthLabel,
                       options: [
-                        const _FilterOption(
+                        const SelectionOption(
                           value: 0,
                           label: 'Todos',
                           key: 'movement_month_filter_0',
                         ),
                         for (var month = 1; month <= 12; month++)
-                          _FilterOption(
+                          SelectionOption(
                             value: month,
-                            label: _monthNames[month - 1],
+                            label: monthNames[month - 1],
                             key: 'movement_month_filter_$month',
                           ),
                       ],
@@ -200,20 +187,20 @@ class _MovementsScreenState extends State<MovementsScreen> {
                     ),
                   ),
                   Expanded(
-                    child: _FilterMenu<int>(
+                    child: SelectionFilterMenu<int>(
                       label: 'Año',
                       tooltip: 'Filtrar por año',
                       menuConstraints: const BoxConstraints(maxHeight: 320),
                       selectedValue: _selectedYear,
                       selectedLabel: _selectedYearLabel,
                       options: [
-                        const _FilterOption(
+                        const SelectionOption(
                           value: 0,
                           label: 'Todos',
                           key: 'movement_year_filter_0',
                         ),
                         for (final year in _availableYears)
-                          _FilterOption(
+                          SelectionOption(
                             value: year,
                             label: year.toString(),
                             key: 'movement_year_filter_$year',
@@ -287,81 +274,6 @@ class _MovementsScreenState extends State<MovementsScreen> {
             icon: const Icon(Icons.delete_outline),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _FilterOption<T> {
-  const _FilterOption({
-    required this.value,
-    required this.label,
-    required this.key,
-  });
-
-  final T value;
-  final String label;
-  final String key;
-}
-
-class _FilterMenu<T> extends StatelessWidget {
-  const _FilterMenu({
-    required this.label,
-    required this.tooltip,
-    required this.selectedValue,
-    required this.selectedLabel,
-    required this.options,
-    required this.onSelected,
-    this.menuConstraints,
-  });
-
-  final String label;
-  final String tooltip;
-  final T selectedValue;
-  final String selectedLabel;
-  final List<_FilterOption<T>> options;
-  final ValueChanged<T> onSelected;
-  final BoxConstraints? menuConstraints;
-
-  @override
-  Widget build(BuildContext context) {
-    return PopupMenuButton<T>(
-      initialValue: selectedValue,
-      tooltip: tooltip,
-      constraints: menuConstraints,
-      onSelected: onSelected,
-      itemBuilder: (context) {
-        return options.map((option) {
-          return CheckedPopupMenuItem<T>(
-            key: ValueKey(option.key),
-            value: option.value,
-            checked: option.value == selectedValue,
-            child: Text(option.label),
-          );
-        }).toList();
-      },
-      child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
-          isDense: true,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 10,
-            vertical: 12,
-          ),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                selectedLabel,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const Icon(Icons.arrow_drop_down, size: 20),
-          ],
-        ),
       ),
     );
   }

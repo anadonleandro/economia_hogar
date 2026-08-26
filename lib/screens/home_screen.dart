@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../constants/month_names.dart';
 import '../models/resumen_mensual.dart';
 import '../utils/monto_formatter.dart';
 
@@ -9,21 +10,6 @@ class HomeScreen extends StatelessWidget {
   final ResumenMensual summary;
   final DateTime period;
 
-  static const List<String> _monthNames = [
-    'Enero',
-    'Febrero',
-    'Marzo',
-    'Abril',
-    'Mayo',
-    'Junio',
-    'Julio',
-    'Agosto',
-    'Septiembre',
-    'Octubre',
-    'Noviembre',
-    'Diciembre',
-  ];
-
   String _formatCurrency(int amountInCents) {
     final sign = amountInCents < 0 ? '- ' : '';
 
@@ -32,7 +18,7 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final periodName = '${_monthNames[period.month - 1]} ${period.year}';
+    final periodName = '${monthNames[period.month - 1]} ${period.year}';
     final balanceColor = summary.saldoEnCentavos < 0
         ? Colors.red
         : Colors.green;

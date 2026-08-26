@@ -7,6 +7,14 @@ import 'package:economia_hogar/models/movimiento.dart';
 import 'package:economia_hogar/models/tipo_movimiento.dart';
 import 'package:economia_hogar/screens/new_movement_screen.dart';
 import 'package:economia_hogar/screens/movements_screen.dart';
+import 'package:economia_hogar/screens/summary_screen.dart';
+
+Future<void> _openNewMovementForm(WidgetTester tester) async {
+  await tester.tap(find.text('Movimientos'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Nuevo movimiento'));
+  await tester.pumpAndSettle();
+}
 
 void main() {
   testWidgets('Muestra la pantalla inicial', (WidgetTester tester) async {
@@ -14,7 +22,12 @@ void main() {
 
     expect(find.text('Todavía no hay movimientos.'), findsOneWidget);
     expect(find.byType(NavigationBar), findsOneWidget);
-    expect(find.byType(FloatingActionButton), findsOneWidget);
+    expect(find.byType(FloatingActionButton), findsNothing);
+    expect(find.text('Nuevo movimiento'), findsNothing);
+
+    await tester.tap(find.text('Movimientos'));
+    await tester.pumpAndSettle();
+
     expect(find.text('Nuevo movimiento'), findsOneWidget);
   });
 
@@ -34,7 +47,33 @@ void main() {
     await tester.tap(find.text('Resumen'));
     await tester.pumpAndSettle();
 
-    expect(find.text('El resumen mensual aparecerá aquí.'), findsOneWidget);
+    final currentPeriod = DateTime.now();
+    const monthNames = [
+      'Enero',
+      'Febrero',
+      'Marzo',
+      'Abril',
+      'Mayo',
+      'Junio',
+      'Julio',
+      'Agosto',
+      'Septiembre',
+      'Octubre',
+      'Noviembre',
+      'Diciembre',
+    ];
+
+    expect(
+      find.text(
+        'Resumen de ${monthNames[currentPeriod.month - 1]} ${currentPeriod.year}',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Ingresos del período'), findsOneWidget);
+    expect(find.text('Gastos del período'), findsOneWidget);
+    expect(find.text('Saldo del período'), findsOneWidget);
+    expect(find.text('0 movimientos en el período'), findsOneWidget);
+    expect(find.text('Sin movimientos en este período.'), findsOneWidget);
   });
 
   testWidgets('Abre y cierra la pantalla de nuevo movimiento', (
@@ -42,8 +81,7 @@ void main() {
   ) async {
     await tester.pumpWidget(const MyApp());
 
-    await tester.tap(find.text('Nuevo movimiento'));
-    await tester.pumpAndSettle();
+    await _openNewMovementForm(tester);
 
     expect(find.text('Tipo de movimiento'), findsOneWidget);
     expect(find.byType(SegmentedButton<TipoMovimiento>), findsOneWidget);
@@ -51,7 +89,10 @@ void main() {
     await tester.pageBack();
     await tester.pumpAndSettle();
 
-    expect(find.text('Todavía no hay movimientos.'), findsOneWidget);
+    expect(
+      find.text('Todavía no hay movimientos registrados.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('Permite seleccionar el tipo de movimiento', (
@@ -59,8 +100,7 @@ void main() {
   ) async {
     await tester.pumpWidget(const MyApp());
 
-    await tester.tap(find.text('Nuevo movimiento'));
-    await tester.pumpAndSettle();
+    await _openNewMovementForm(tester);
 
     var selector = tester.widget<SegmentedButton<TipoMovimiento>>(
       find.byType(SegmentedButton<TipoMovimiento>),
@@ -83,8 +123,7 @@ void main() {
   ) async {
     await tester.pumpWidget(const MyApp());
 
-    await tester.tap(find.text('Nuevo movimiento'));
-    await tester.pumpAndSettle();
+    await _openNewMovementForm(tester);
 
     var categoryMenu = tester.widget<DropdownMenu<CategoriaMovimiento>>(
       find.byType(DropdownMenu<CategoriaMovimiento>),
@@ -132,8 +171,7 @@ void main() {
   ) async {
     await tester.pumpWidget(const MyApp());
 
-    await tester.tap(find.text('Nuevo movimiento'));
-    await tester.pumpAndSettle();
+    await _openNewMovementForm(tester);
 
     final amountField = find.widgetWithText(TextFormField, 'Monto');
 
@@ -147,8 +185,7 @@ void main() {
   testWidgets('Valida el monto del movimiento', (WidgetTester tester) async {
     await tester.pumpWidget(const MyApp());
 
-    await tester.tap(find.text('Nuevo movimiento'));
-    await tester.pumpAndSettle();
+    await _openNewMovementForm(tester);
 
     final amountField = find.widgetWithText(TextFormField, 'Monto');
 
@@ -187,8 +224,7 @@ void main() {
   ) async {
     await tester.pumpWidget(const MyApp());
 
-    await tester.tap(find.text('Nuevo movimiento'));
-    await tester.pumpAndSettle();
+    await _openNewMovementForm(tester);
 
     final descriptionFinder = find.widgetWithText(
       TextFormField,
@@ -226,8 +262,7 @@ void main() {
 
     await tester.pumpWidget(const MyApp());
 
-    await tester.tap(find.text('Nuevo movimiento'));
-    await tester.pumpAndSettle();
+    await _openNewMovementForm(tester);
 
     expect(find.text(formattedToday), findsOneWidget);
 
@@ -247,8 +282,7 @@ void main() {
   ) async {
     await tester.pumpWidget(const MyApp());
 
-    await tester.tap(find.text('Nuevo movimiento'));
-    await tester.pumpAndSettle();
+    await _openNewMovementForm(tester);
 
     final saveButton = find.text('Guardar');
 
@@ -284,8 +318,7 @@ void main() {
 
     expect(find.text('0 movimientos en el mes'), findsOneWidget);
 
-    await tester.tap(find.text('Nuevo movimiento'));
-    await tester.pumpAndSettle();
+    await _openNewMovementForm(tester);
 
     final amountField = find.widgetWithText(TextFormField, 'Monto');
     final saveButton = find.text('Guardar');
@@ -344,8 +377,7 @@ void main() {
   ) async {
     await tester.pumpWidget(const MyApp());
 
-    await tester.tap(find.text('Nuevo movimiento'));
-    await tester.pumpAndSettle();
+    await _openNewMovementForm(tester);
 
     final amountField = find.widgetWithText(TextFormField, 'Monto');
     final descriptionField = find.widgetWithText(
@@ -482,5 +514,92 @@ void main() {
     expect(find.text('Gasto visible'), findsOneWidget);
     expect(find.text('Gasto anterior'), findsOneWidget);
     expect(find.text('Todos'), findsNWidgets(3));
+  });
+
+  testWidgets('selecciona el período del resumen mensual', (
+    WidgetTester tester,
+  ) async {
+    final currentPeriod = DateTime.now();
+    final previousYear = currentPeriod.year - 1;
+    final movements = [
+      Movimiento(
+        tipo: TipoMovimiento.ingreso,
+        montoEnCentavos: 123456,
+        categoria: CategoriaMovimiento.sueldo,
+        fecha: DateTime(previousYear, 1, 5),
+      ),
+      Movimiento(
+        tipo: TipoMovimiento.gasto,
+        montoEnCentavos: 50000,
+        categoria: CategoriaMovimiento.alimentos,
+        fecha: DateTime(currentPeriod.year, currentPeriod.month, 10),
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: SummaryScreen(movements: movements)),
+      ),
+    );
+
+    await tester.tap(find.byTooltip('Seleccionar mes del resumen'));
+    await tester.pumpAndSettle();
+    final januaryOption = find.byKey(const ValueKey('summary_month_1'));
+    await tester.ensureVisible(januaryOption);
+    await tester.pumpAndSettle();
+    await tester.tap(januaryOption);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Seleccionar año del resumen'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(ValueKey('summary_year_$previousYear')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Resumen de Enero $previousYear'), findsOneWidget);
+    expect(find.text(r'$ 1.234,56'), findsNWidgets(2));
+    expect(find.text(r'$ 0,00'), findsOneWidget);
+    expect(find.text('1 movimiento en el período'), findsOneWidget);
+    expect(find.text('Sin gastos en este período.'), findsOneWidget);
+  });
+
+  testWidgets('muestra el desglose de gastos por categoría', (
+    WidgetTester tester,
+  ) async {
+    final currentPeriod = DateTime.now();
+    final movements = [
+      Movimiento(
+        tipo: TipoMovimiento.gasto,
+        montoEnCentavos: 60000,
+        categoria: CategoriaMovimiento.alimentos,
+        fecha: DateTime(currentPeriod.year, currentPeriod.month, 5),
+      ),
+      Movimiento(
+        tipo: TipoMovimiento.gasto,
+        montoEnCentavos: 20000,
+        categoria: CategoriaMovimiento.alimentos,
+        fecha: DateTime(currentPeriod.year, currentPeriod.month, 12),
+      ),
+      Movimiento(
+        tipo: TipoMovimiento.gasto,
+        montoEnCentavos: 20000,
+        categoria: CategoriaMovimiento.transporte,
+        fecha: DateTime(currentPeriod.year, currentPeriod.month, 18),
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: SummaryScreen(movements: movements)),
+      ),
+    );
+
+    expect(find.text('Gastos por categoría'), findsOneWidget);
+    expect(find.text('Alimentos'), findsOneWidget);
+    expect(find.text(r'$ 800,00'), findsOneWidget);
+    expect(find.text('2 movimientos · 80,0 %'), findsOneWidget);
+    expect(find.text('Transporte'), findsOneWidget);
+    expect(find.text(r'$ 200,00'), findsOneWidget);
+    expect(find.text('1 movimiento · 20,0 %'), findsOneWidget);
+    expect(find.byType(LinearProgressIndicator), findsNWidgets(2));
   });
 }

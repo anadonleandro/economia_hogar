@@ -78,7 +78,7 @@ class _AppShellState extends State<AppShell> {
         onMovementTap: _editMovement,
         onDeleteMovement: _confirmDeleteMovement,
       ),
-      const SummaryScreen(),
+      SummaryScreen(movements: List.unmodifiable(_movements)),
     ];
   }
 
@@ -234,14 +234,24 @@ class _AppShellState extends State<AppShell> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(_titles[_selectedIndex]),
+        title: Row(
+          children: [
+            Text(_titles[_selectedIndex]),
+            if (_selectedIndex == 1) ...[
+              const SizedBox(width: 12),
+              FilledButton.tonal(
+                onPressed: _openNewMovementForm,
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  visualDensity: VisualDensity.compact,
+                ),
+                child: const Text('Nuevo movimiento'),
+              ),
+            ],
+          ],
+        ),
       ),
       body: _screens[_selectedIndex],
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openNewMovementForm,
-        icon: const Icon(Icons.add),
-        label: const Text('Nuevo movimiento'),
-      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: _selectDestination,
