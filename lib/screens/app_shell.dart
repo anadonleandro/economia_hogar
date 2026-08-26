@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/movimiento_repository.dart';
 import '../models/movimiento.dart';
 import '../services/resumen_mensual_calculator.dart';
 import 'home_screen.dart';
@@ -8,7 +9,9 @@ import 'new_movement_screen.dart';
 import 'summary_screen.dart';
 
 class AppShell extends StatefulWidget {
-  const AppShell({super.key});
+  const AppShell({super.key, this.movementRepository});
+
+  final MovimientoRepository? movementRepository;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -23,6 +26,42 @@ class _AppShellState extends State<AppShell> {
   int _selectedIndex = 0;
 
   static const List<String> _titles = ['Inicio', 'Movimientos', 'Resumen'];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMovements();
+  }
+
+  Future<void> _loadMovements() async {
+    final repository = widget.movementRepository;
+
+    if (repository == null) {
+      return;
+    }
+
+    try {
+      final movements = await repository.obtenerTodos();
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _movements
+          ..clear()
+          ..addAll(movements);
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudieron cargar los movimientos.')),
+      );
+    }
+  }
 
   List<Widget> get _screens {
     final currentPeriod = DateTime.now();
@@ -54,10 +93,39 @@ class _AppShellState extends State<AppShell> {
       return;
     }
 
-    setState(() {
-      _movements.add(movement);
-      _selectedIndex = 1;
-    });
+    final repository = widget.movementRepository;
+
+    if (repository == null) {
+      setState(() {
+        _movements.add(movement);
+        _selectedIndex = 1;
+      });
+      return;
+    }
+
+    try {
+      await repository.insertar(movement);
+      final movements = await repository.obtenerTodos();
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _movements
+          ..clear()
+          ..addAll(movements);
+        _selectedIndex = 1;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo guardar el movimiento.')),
+      );
+    }
   }
 
   @override
