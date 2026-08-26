@@ -17,6 +17,8 @@ class ResumenMensualCalculator {
     var ingresosEnCentavos = 0;
     var gastosEnCentavos = 0;
     var cantidadMovimientos = 0;
+    var cantidadIngresos = 0;
+    var cantidadGastos = 0;
 
     for (final movimiento in movimientos) {
       final perteneceAlPeriodo =
@@ -30,8 +32,10 @@ class ResumenMensualCalculator {
 
       if (movimiento.tipo == TipoMovimiento.ingreso) {
         ingresosEnCentavos += movimiento.montoEnCentavos;
+        cantidadIngresos++;
       } else {
         gastosEnCentavos += movimiento.montoEnCentavos;
+        cantidadGastos++;
       }
     }
 
@@ -39,6 +43,8 @@ class ResumenMensualCalculator {
       ingresosEnCentavos: ingresosEnCentavos,
       gastosEnCentavos: gastosEnCentavos,
       cantidadMovimientos: cantidadMovimientos,
+      cantidadIngresos: cantidadIngresos,
+      cantidadGastos: cantidadGastos,
     );
   }
 }

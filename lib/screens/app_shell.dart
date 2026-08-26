@@ -2,16 +2,19 @@ import 'package:flutter/material.dart';
 
 import '../data/movimiento_repository.dart';
 import '../models/movimiento.dart';
+import '../models/tipo_movimiento.dart';
 import '../services/resumen_mensual_calculator.dart';
+import 'about_screen.dart';
 import 'home_screen.dart';
 import 'movements_screen.dart';
 import 'new_movement_screen.dart';
 import 'summary_screen.dart';
 
 class AppShell extends StatefulWidget {
-  const AppShell({super.key, this.movementRepository});
+  const AppShell({super.key, this.movementRepository, this.movementsLoader});
 
   final MovimientoRepository? movementRepository;
+  final Future<List<Movimiento>> Function()? movementsLoader;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -24,24 +27,36 @@ class _AppShellState extends State<AppShell> {
   final List<Movimiento> _movements = [];
 
   int _selectedIndex = 0;
+  int _homeResetVersion = 0;
+  DateTime _selectedHomeDate = DateUtils.dateOnly(DateTime.now());
+  bool _isLoadingMovements = false;
+  String? _loadErrorMessage;
 
   static const List<String> _titles = ['Inicio', 'Movimientos', 'Resumen'];
 
   @override
   void initState() {
     super.initState();
+    _isLoadingMovements =
+        widget.movementRepository != null || widget.movementsLoader != null;
     _loadMovements();
   }
 
   Future<void> _loadMovements() async {
     final repository = widget.movementRepository;
+    final loader = widget.movementsLoader ?? repository?.obtenerTodos;
 
-    if (repository == null) {
+    if (loader == null) {
       return;
     }
 
+    setState(() {
+      _isLoadingMovements = true;
+      _loadErrorMessage = null;
+    });
+
     try {
-      final movements = await repository.obtenerTodos();
+      final movements = await loader();
 
       if (!mounted) {
         return;
@@ -51,20 +66,78 @@ class _AppShellState extends State<AppShell> {
         _movements
           ..clear()
           ..addAll(movements);
+        _isLoadingMovements = false;
       });
     } catch (_) {
       if (!mounted) {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudieron cargar los movimientos.')),
+      setState(() {
+        _isLoadingMovements = false;
+        _loadErrorMessage = 'No se pudieron cargar los movimientos.';
+      });
+    }
+  }
+
+  Widget _buildBody() {
+    if (_isLoadingMovements) {
+      return const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Cargando movimientos...'),
+          ],
+        ),
       );
     }
+
+    final loadErrorMessage = _loadErrorMessage;
+
+    if (loadErrorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline, size: 48),
+              const SizedBox(height: 16),
+              Text(loadErrorMessage, textAlign: TextAlign.center),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: _loadMovements,
+                child: const Text('Reintentar'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return _screens[_selectedIndex];
   }
 
   List<Widget> get _screens {
     final currentPeriod = DateTime.now();
+    final selectedDayMovements =
+        _movements
+            .where(
+              (movement) =>
+                  movement.fecha.year == _selectedHomeDate.year &&
+                  movement.fecha.month == _selectedHomeDate.month &&
+                  movement.fecha.day == _selectedHomeDate.day,
+            )
+            .toList()
+          ..sort((a, b) {
+            final dateComparison = b.fecha.compareTo(a.fecha);
+
+            return dateComparison != 0
+                ? dateComparison
+                : b.fechaCreacion.compareTo(a.fechaCreacion);
+          });
     final summary = _summaryCalculator.calcular(
       movimientos: _movements,
       anio: currentPeriod.year,
@@ -72,7 +145,22 @@ class _AppShellState extends State<AppShell> {
     );
 
     return [
-      HomeScreen(summary: summary, period: currentPeriod),
+      HomeScreen(
+        key: ValueKey(_homeResetVersion),
+        summary: summary,
+        period: currentPeriod,
+        selectedDate: _selectedHomeDate,
+        selectedDayMovements: selectedDayMovements,
+        canSelectPreviousDay: _selectedHomeDate.day > 1,
+        canSelectNextDay: !_isToday(_selectedHomeDate),
+        onPreviousDay: _selectPreviousHomeDay,
+        onNextDay: _selectNextHomeDay,
+        onAddIncome: () =>
+            _openNewMovementForm(initialType: TipoMovimiento.ingreso),
+        onAddExpense: () =>
+            _openNewMovementForm(initialType: TipoMovimiento.gasto),
+        onMovementTap: _editMovement,
+      ),
       MovementsScreen(
         movements: List.unmodifiable(_movements),
         onMovementTap: _editMovement,
@@ -82,14 +170,88 @@ class _AppShellState extends State<AppShell> {
     ];
   }
 
-  void _selectDestination(int index) {
+  bool _isToday(DateTime date) {
+    return DateUtils.isSameDay(date, DateTime.now());
+  }
+
+  void _selectPreviousHomeDay() {
+    if (_selectedHomeDate.day == 1) {
+      return;
+    }
+
     setState(() {
-      _selectedIndex = index;
+      _selectedHomeDate = _selectedHomeDate.subtract(const Duration(days: 1));
     });
   }
 
-  Future<void> _openNewMovementForm() async {
-    await _openMovementForm();
+  void _selectNextHomeDay() {
+    if (_isToday(_selectedHomeDate)) {
+      return;
+    }
+
+    setState(() {
+      _selectedHomeDate = _selectedHomeDate.add(const Duration(days: 1));
+    });
+  }
+
+  void _selectDestination(int index) {
+    setState(() {
+      _selectedIndex = index;
+
+      if (index == 0) {
+        _selectedHomeDate = DateUtils.dateOnly(DateTime.now());
+        _homeResetVersion++;
+      }
+    });
+  }
+
+  Future<void> _openAboutScreen() async {
+    Navigator.of(context).pop();
+    await Navigator.of(
+      context,
+    ).push<void>(MaterialPageRoute(builder: (context) => const AboutScreen()));
+  }
+
+  Widget _buildDrawer() {
+    return Drawer(
+      child: SafeArea(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            DrawerHeader(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primaryContainer,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Icon(
+                    Icons.account_balance_wallet_outlined,
+                    size: 40,
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Economía del Hogar',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ],
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.info_outline),
+              title: const Text('Acerca de'),
+              onTap: _openAboutScreen,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openNewMovementForm({TipoMovimiento? initialType}) async {
+    await _openMovementForm(initialType: initialType);
   }
 
   Future<void> _editMovement(Movimiento movement) async {
@@ -172,11 +334,16 @@ class _AppShellState extends State<AppShell> {
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Future<void> _openMovementForm({Movimiento? initialMovement}) async {
+  Future<void> _openMovementForm({
+    Movimiento? initialMovement,
+    TipoMovimiento? initialType,
+  }) async {
     final movement = await Navigator.of(context).push<Movimiento>(
       MaterialPageRoute(
-        builder: (context) =>
-            NewMovementScreen(initialMovement: initialMovement),
+        builder: (context) => NewMovementScreen(
+          initialMovement: initialMovement,
+          initialType: initialType,
+        ),
       ),
     );
 
@@ -232,6 +399,7 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: _buildDrawer(),
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Row(
@@ -240,7 +408,7 @@ class _AppShellState extends State<AppShell> {
             if (_selectedIndex == 1) ...[
               const SizedBox(width: 12),
               FilledButton.tonal(
-                onPressed: _openNewMovementForm,
+                onPressed: () => _openNewMovementForm(),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   visualDensity: VisualDensity.compact,
@@ -251,7 +419,7 @@ class _AppShellState extends State<AppShell> {
           ],
         ),
       ),
-      body: _screens[_selectedIndex],
+      body: _buildBody(),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: _selectDestination,

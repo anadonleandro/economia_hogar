@@ -8,9 +8,13 @@ void main() {
       ingresosEnCentavos: 120000000,
       gastosEnCentavos: 77465000,
       cantidadMovimientos: 15,
+      cantidadIngresos: 6,
+      cantidadGastos: 9,
     );
 
     expect(resumen.saldoEnCentavos, 42535000);
     expect(resumen.cantidadMovimientos, 15);
+    expect(resumen.cantidadIngresos, 6);
+    expect(resumen.cantidadGastos, 9);
   });
 }

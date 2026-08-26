@@ -1,17 +1,21 @@
-# economia_hogar
+# Economía del Hogar
 
-A new Flutter project.
+Aplicación móvil Flutter para registrar ingresos y gastos, consultar el saldo
+mensual y analizar los gastos del hogar por categoría.
 
-## Getting Started
+La primera versión funciona offline, sin login ni backend. Los datos se guardan
+localmente en el dispositivo mediante SQLite.
 
-This project is a starting point for a Flutter application.
+## Estado actual
 
-A few resources to get you started if this is your first Flutter project:
+- Alta, edición y eliminación de movimientos.
+- Filtros por tipo, mes y año.
+- Resumen mensual y desglose de gastos por categoría.
+- Persistencia local y pruebas automatizadas.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+## Futuro
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- ABM de categorías personalizadas.
+- Migración de las categorías actuales desde enum a una tabla SQLite.
+- Desactivación de categorías utilizadas para preservar el historial.
+- Configuración, exportación y copias de seguridad.

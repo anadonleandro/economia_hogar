@@ -6,9 +6,11 @@ import '../models/tipo_movimiento.dart';
 import '../utils/monto_parser.dart';
 
 class NewMovementScreen extends StatefulWidget {
-  const NewMovementScreen({super.key, this.initialMovement});
+  const NewMovementScreen({super.key, this.initialMovement, this.initialType})
+    : assert(initialMovement == null || initialType == null);
 
   final Movimiento? initialMovement;
+  final TipoMovimiento? initialType;
 
   @override
   State<NewMovementScreen> createState() => _NewMovementScreenState();
@@ -30,8 +32,13 @@ class _NewMovementScreenState extends State<NewMovementScreen> {
     super.initState();
 
     final movement = widget.initialMovement;
-    _selectedType = movement?.tipo ?? TipoMovimiento.gasto;
-    _selectedCategory = movement?.categoria ?? CategoriaMovimiento.alimentos;
+    _selectedType =
+        movement?.tipo ?? widget.initialType ?? TipoMovimiento.gasto;
+    _selectedCategory =
+        movement?.categoria ??
+        CategoriaMovimiento.values.firstWhere(
+          (category) => category.tipo == _selectedType,
+        );
     _selectedDate = movement?.fecha ?? DateTime.now();
     _amountController = TextEditingController(
       text: movement == null
