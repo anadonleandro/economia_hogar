@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../models/categoria_movimiento.dart';
 import '../models/tipo_movimiento.dart';
 
 class NewMovementScreen extends StatefulWidget {
@@ -11,10 +12,32 @@ class NewMovementScreen extends StatefulWidget {
 
 class _NewMovementScreenState extends State<NewMovementScreen> {
   TipoMovimiento _selectedType = TipoMovimiento.gasto;
+  CategoriaMovimiento _selectedCategory = CategoriaMovimiento.alimentos;
+
+  List<CategoriaMovimiento> get _availableCategories {
+    return CategoriaMovimiento.values
+        .where((category) => category.tipo == _selectedType)
+        .toList();
+  }
 
   void _selectType(Set<TipoMovimiento> selection) {
+    final selectedType = selection.first;
+
     setState(() {
-      _selectedType = selection.first;
+      _selectedType = selectedType;
+      _selectedCategory = CategoriaMovimiento.values.firstWhere(
+        (category) => category.tipo == selectedType,
+      );
+    });
+  }
+
+  void _selectCategory(CategoriaMovimiento? category) {
+    if (category == null) {
+      return;
+    }
+
+    setState(() {
+      _selectedCategory = category;
     });
   }
 
@@ -47,6 +70,19 @@ class _NewMovementScreenState extends State<NewMovementScreen> {
               ],
               selected: {_selectedType},
               onSelectionChanged: _selectType,
+            ),
+            const SizedBox(height: 24),
+            DropdownMenu<CategoriaMovimiento>(
+              key: ValueKey(_selectedType),
+              initialSelection: _selectedCategory,
+              label: const Text('Categoría'),
+              dropdownMenuEntries: _availableCategories.map((category) {
+                return DropdownMenuEntry(
+                  value: category,
+                  label: category.nombre,
+                );
+              }).toList(),
+              onSelected: _selectCategory,
             ),
           ],
         ),

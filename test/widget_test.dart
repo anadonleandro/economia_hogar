@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:economia_hogar/main.dart';
+import 'package:economia_hogar/models/categoria_movimiento.dart';
 import 'package:economia_hogar/models/tipo_movimiento.dart';
 
 void main() {
@@ -72,5 +73,54 @@ void main() {
     );
 
     expect(selector.selected, {TipoMovimiento.ingreso});
+  });
+
+  testWidgets('Filtra las categorías según el tipo de movimiento', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const MyApp());
+
+    await tester.tap(find.text('Nuevo movimiento'));
+    await tester.pumpAndSettle();
+
+    var categoryMenu = tester.widget<DropdownMenu<CategoriaMovimiento>>(
+      find.byType(DropdownMenu<CategoriaMovimiento>),
+    );
+
+    expect(categoryMenu.initialSelection, CategoriaMovimiento.alimentos);
+    expect(categoryMenu.dropdownMenuEntries, hasLength(9));
+    expect(
+      categoryMenu.dropdownMenuEntries.every(
+        (entry) => entry.value.tipo == TipoMovimiento.gasto,
+      ),
+      isTrue,
+    );
+
+    await tester.tap(find.text('Ingreso'));
+    await tester.pumpAndSettle();
+
+    categoryMenu = tester.widget<DropdownMenu<CategoriaMovimiento>>(
+      find.byType(DropdownMenu<CategoriaMovimiento>),
+    );
+
+    expect(categoryMenu.initialSelection, CategoriaMovimiento.sueldo);
+    expect(categoryMenu.dropdownMenuEntries, hasLength(5));
+    expect(
+      categoryMenu.dropdownMenuEntries.every(
+        (entry) => entry.value.tipo == TipoMovimiento.ingreso,
+      ),
+      isTrue,
+    );
+
+    await tester.tap(find.byType(DropdownMenu<CategoriaMovimiento>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Trabajo extra').last);
+    await tester.pumpAndSettle();
+
+    categoryMenu = tester.widget<DropdownMenu<CategoriaMovimiento>>(
+      find.byType(DropdownMenu<CategoriaMovimiento>),
+    );
+
+    expect(categoryMenu.initialSelection, CategoriaMovimiento.trabajoExtra);
   });
 }
