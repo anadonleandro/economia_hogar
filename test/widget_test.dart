@@ -123,4 +123,154 @@ void main() {
 
     expect(categoryMenu.initialSelection, CategoriaMovimiento.trabajoExtra);
   });
+
+  testWidgets('Permite ingresar el monto del movimiento', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const MyApp());
+
+    await tester.tap(find.text('Nuevo movimiento'));
+    await tester.pumpAndSettle();
+
+    final amountField = find.widgetWithText(TextFormField, 'Monto');
+
+    expect(amountField, findsOneWidget);
+
+    await tester.enterText(amountField, '45300,50');
+
+    expect(find.text('45300,50'), findsOneWidget);
+  });
+
+  testWidgets('Valida el monto del movimiento', (WidgetTester tester) async {
+    await tester.pumpWidget(const MyApp());
+
+    await tester.tap(find.text('Nuevo movimiento'));
+    await tester.pumpAndSettle();
+
+    final amountField = find.widgetWithText(TextFormField, 'Monto');
+
+    await tester.enterText(amountField, '1');
+    await tester.enterText(amountField, '');
+    await tester.pump();
+
+    expect(find.text('Ingresá un monto.'), findsOneWidget);
+
+    await tester.enterText(amountField, '0');
+    await tester.pump();
+
+    expect(find.text('El monto debe ser mayor que cero.'), findsOneWidget);
+
+    await tester.enterText(amountField, '10,999');
+    await tester.pump();
+
+    expect(
+      find.text('Ingresá un monto válido con hasta dos decimales.'),
+      findsOneWidget,
+    );
+
+    await tester.enterText(amountField, '45300,50');
+    await tester.pump();
+
+    expect(find.text('Ingresá un monto.'), findsNothing);
+    expect(find.text('El monto debe ser mayor que cero.'), findsNothing);
+    expect(
+      find.text('Ingresá un monto válido con hasta dos decimales.'),
+      findsNothing,
+    );
+  });
+
+  testWidgets('Permite ingresar una descripción opcional', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const MyApp());
+
+    await tester.tap(find.text('Nuevo movimiento'));
+    await tester.pumpAndSettle();
+
+    final descriptionFinder = find.widgetWithText(
+      TextFormField,
+      'Descripción (opcional)',
+    );
+    final editableText = tester.widget<EditableText>(
+      find.descendant(
+        of: descriptionFinder,
+        matching: find.byType(EditableText),
+      ),
+    );
+
+    expect(editableText.maxLines, 3);
+
+    final longDescription = List.filled(201, 'a').join();
+
+    await tester.enterText(descriptionFinder, longDescription);
+
+    expect(editableText.controller.text, hasLength(200));
+
+    await tester.enterText(descriptionFinder, 'Compra semanal');
+
+    expect(find.text('Compra semanal'), findsOneWidget);
+  });
+
+  testWidgets('Muestra la fecha actual y abre el calendario', (
+    WidgetTester tester,
+  ) async {
+    final today = DateTime.now();
+    final formattedToday = [
+      today.day.toString().padLeft(2, '0'),
+      today.month.toString().padLeft(2, '0'),
+      today.year.toString(),
+    ].join('/');
+
+    await tester.pumpWidget(const MyApp());
+
+    await tester.tap(find.text('Nuevo movimiento'));
+    await tester.pumpAndSettle();
+
+    expect(find.text(formattedToday), findsOneWidget);
+
+    await tester.tap(find.text(formattedToday));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(DatePickerDialog), findsOneWidget);
+
+    Navigator.of(tester.element(find.byType(DatePickerDialog))).pop();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(DatePickerDialog), findsNothing);
+  });
+
+  testWidgets('Valida y guarda el formulario de movimiento', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const MyApp());
+
+    await tester.tap(find.text('Nuevo movimiento'));
+    await tester.pumpAndSettle();
+
+    final saveButton = find.text('Guardar');
+
+    await tester.ensureVisible(saveButton);
+    await tester.tap(saveButton);
+    await tester.pump();
+
+    expect(find.text('Ingresá un monto.'), findsOneWidget);
+    expect(find.text('Nuevo movimiento'), findsOneWidget);
+
+    final amountField = find.widgetWithText(TextFormField, 'Monto');
+    final descriptionField = find.widgetWithText(
+      TextFormField,
+      'Descripción (opcional)',
+    );
+
+    await tester.enterText(amountField, '45300,50');
+    await tester.enterText(descriptionField, 'Compra supermercado');
+    await tester.ensureVisible(saveButton);
+    await tester.tap(saveButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Compra supermercado'), findsOneWidget);
+    expect(find.textContaining('Alimentos ·'), findsOneWidget);
+    expect(find.text(r'- $ 45.300,50'), findsOneWidget);
+    expect(find.text('Nuevo movimiento'), findsOneWidget);
+  });
 }

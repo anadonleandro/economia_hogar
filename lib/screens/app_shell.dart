@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../models/movimiento.dart';
 import 'home_screen.dart';
 import 'movements_screen.dart';
-import 'summary_screen.dart';
 import 'new_movement_screen.dart';
+import 'summary_screen.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -13,14 +14,16 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> {
+  final List<Movimiento> _movements = [];
+
   int _selectedIndex = 0;
 
   static const List<String> _titles = ['Inicio', 'Movimientos', 'Resumen'];
 
-  static const List<Widget> _screens = [
-    HomeScreen(),
-    MovementsScreen(),
-    SummaryScreen(),
+  List<Widget> get _screens => [
+    const HomeScreen(),
+    MovementsScreen(movements: List.unmodifiable(_movements)),
+    const SummaryScreen(),
   ];
 
   void _selectDestination(int index) {
@@ -29,10 +32,19 @@ class _AppShellState extends State<AppShell> {
     });
   }
 
-  void _openNewMovementForm() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (context) => const NewMovementScreen()),
+  Future<void> _openNewMovementForm() async {
+    final movement = await Navigator.of(context).push<Movimiento>(
+      MaterialPageRoute(builder: (context) => const NewMovementScreen()),
     );
+
+    if (movement == null || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _movements.add(movement);
+      _selectedIndex = 1;
+    });
   }
 
   @override
