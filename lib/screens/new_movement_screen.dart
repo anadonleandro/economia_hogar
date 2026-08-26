@@ -6,7 +6,9 @@ import '../models/tipo_movimiento.dart';
 import '../utils/monto_parser.dart';
 
 class NewMovementScreen extends StatefulWidget {
-  const NewMovementScreen({super.key});
+  const NewMovementScreen({super.key, this.initialMovement});
+
+  final Movimiento? initialMovement;
 
   @override
   State<NewMovementScreen> createState() => _NewMovementScreenState();
@@ -14,12 +16,39 @@ class NewMovementScreen extends StatefulWidget {
 
 class _NewMovementScreenState extends State<NewMovementScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final TextEditingController _amountController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
+  late final TextEditingController _amountController;
+  late final TextEditingController _descriptionController;
 
-  TipoMovimiento _selectedType = TipoMovimiento.gasto;
-  CategoriaMovimiento _selectedCategory = CategoriaMovimiento.alimentos;
-  DateTime _selectedDate = DateTime.now();
+  late TipoMovimiento _selectedType;
+  late CategoriaMovimiento _selectedCategory;
+  late DateTime _selectedDate;
+
+  bool get _isEditing => widget.initialMovement != null;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final movement = widget.initialMovement;
+    _selectedType = movement?.tipo ?? TipoMovimiento.gasto;
+    _selectedCategory = movement?.categoria ?? CategoriaMovimiento.alimentos;
+    _selectedDate = movement?.fecha ?? DateTime.now();
+    _amountController = TextEditingController(
+      text: movement == null
+          ? ''
+          : _formatAmountForInput(movement.montoEnCentavos),
+    );
+    _descriptionController = TextEditingController(
+      text: movement?.descripcion ?? '',
+    );
+  }
+
+  String _formatAmountForInput(int amountInCents) {
+    final pesos = amountInCents ~/ 100;
+    final cents = (amountInCents % 100).toString().padLeft(2, '0');
+
+    return '$pesos,$cents';
+  }
 
   List<CategoriaMovimiento> get _availableCategories {
     return CategoriaMovimiento.values
@@ -102,7 +131,9 @@ class _NewMovementScreenState extends State<NewMovementScreen> {
     }
 
     final description = _descriptionController.text.trim();
+    final initialMovement = widget.initialMovement;
     final movement = Movimiento(
+      id: initialMovement?.id,
       tipo: _selectedType,
       montoEnCentavos: parseMontoEnCentavos(_amountController.text),
       categoria: _selectedCategory,
@@ -112,6 +143,7 @@ class _NewMovementScreenState extends State<NewMovementScreen> {
         _selectedDate.month,
         _selectedDate.day,
       ),
+      fechaCreacion: initialMovement?.fechaCreacion,
     );
 
     Navigator.of(context).pop(movement);
@@ -127,7 +159,9 @@ class _NewMovementScreenState extends State<NewMovementScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Nuevo movimiento')),
+      appBar: AppBar(
+        title: Text(_isEditing ? 'Editar movimiento' : 'Nuevo movimiento'),
+      ),
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
@@ -215,7 +249,7 @@ class _NewMovementScreenState extends State<NewMovementScreen> {
                   child: FilledButton.icon(
                     onPressed: _saveMovement,
                     icon: const Icon(Icons.save_outlined),
-                    label: const Text('Guardar'),
+                    label: Text(_isEditing ? 'Guardar cambios' : 'Guardar'),
                   ),
                 ),
               ],

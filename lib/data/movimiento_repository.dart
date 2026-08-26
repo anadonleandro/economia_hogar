@@ -20,6 +20,37 @@ class MovimientoRepository {
     return database.insert(AppDatabase.movementsTable, _toMap(movimiento));
   }
 
+  Future<int> actualizar(Movimiento movimiento) async {
+    final id = movimiento.id;
+
+    if (id == null) {
+      throw ArgumentError('El movimiento debe tener un id para actualizarse.');
+    }
+
+    final database = await _database;
+
+    return database.update(
+      AppDatabase.movementsTable,
+      _toMap(movimiento),
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<int> eliminar(int id) async {
+    if (id <= 0) {
+      throw ArgumentError.value(id, 'id', 'El id debe ser mayor que cero.');
+    }
+
+    final database = await _database;
+
+    return database.delete(
+      AppDatabase.movementsTable,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
   Future<List<Movimiento>> obtenerTodos() async {
     final database = await _database;
     final rows = await database.query(

@@ -73,7 +73,11 @@ class _AppShellState extends State<AppShell> {
 
     return [
       HomeScreen(summary: summary, period: currentPeriod),
-      MovementsScreen(movements: List.unmodifiable(_movements)),
+      MovementsScreen(
+        movements: List.unmodifiable(_movements),
+        onMovementTap: _editMovement,
+        onDeleteMovement: _confirmDeleteMovement,
+      ),
       const SummaryScreen(),
     ];
   }
@@ -85,8 +89,95 @@ class _AppShellState extends State<AppShell> {
   }
 
   Future<void> _openNewMovementForm() async {
+    await _openMovementForm();
+  }
+
+  Future<void> _editMovement(Movimiento movement) async {
+    await _openMovementForm(initialMovement: movement);
+  }
+
+  Future<void> _confirmDeleteMovement(Movimiento movement) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Eliminar movimiento'),
+          content: const Text(
+            '¿Querés eliminar este movimiento? Esta acción no se puede deshacer.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Eliminar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    final repository = widget.movementRepository;
+
+    if (repository == null) {
+      setState(() {
+        _movements.remove(movement);
+      });
+      return;
+    }
+
+    final id = movement.id;
+
+    if (id == null) {
+      _showMessage('No se pudo identificar el movimiento.');
+      return;
+    }
+
+    try {
+      final affectedRows = await repository.eliminar(id);
+
+      if (affectedRows != 1) {
+        throw StateError('No se encontró el movimiento para eliminar.');
+      }
+
+      final movements = await repository.obtenerTodos();
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _movements
+          ..clear()
+          ..addAll(movements);
+      });
+      _showMessage('Movimiento eliminado.');
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      _showMessage('No se pudo eliminar el movimiento.');
+    }
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _openMovementForm({Movimiento? initialMovement}) async {
     final movement = await Navigator.of(context).push<Movimiento>(
-      MaterialPageRoute(builder: (context) => const NewMovementScreen()),
+      MaterialPageRoute(
+        builder: (context) =>
+            NewMovementScreen(initialMovement: initialMovement),
+      ),
     );
 
     if (movement == null || !mounted) {
@@ -97,14 +188,24 @@ class _AppShellState extends State<AppShell> {
 
     if (repository == null) {
       setState(() {
-        _movements.add(movement);
+        final index = _movements.indexWhere((item) => item.id == movement.id);
+
+        if (movement.id != null && index != -1) {
+          _movements[index] = movement;
+        } else {
+          _movements.add(movement);
+        }
         _selectedIndex = 1;
       });
       return;
     }
 
     try {
-      await repository.insertar(movement);
+      if (movement.id == null) {
+        await repository.insertar(movement);
+      } else {
+        await repository.actualizar(movement);
+      }
       final movements = await repository.obtenerTodos();
 
       if (!mounted) {

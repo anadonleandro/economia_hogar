@@ -78,4 +78,67 @@ void main() {
     expect(savedMovements.first.tipo, TipoMovimiento.ingreso);
     expect(savedMovements.last.tipo, TipoMovimiento.gasto);
   });
+
+  test('actualiza un movimiento existente por su id', () async {
+    final originalMovement = Movimiento(
+      tipo: TipoMovimiento.gasto,
+      montoEnCentavos: 100000,
+      categoria: CategoriaMovimiento.alimentos,
+      descripcion: 'Compra original',
+      fecha: DateTime(2026, 8, 20),
+    );
+    final id = await repository.insertar(originalMovement);
+    final updatedMovement = Movimiento(
+      id: id,
+      tipo: TipoMovimiento.ingreso,
+      montoEnCentavos: 250000,
+      categoria: CategoriaMovimiento.trabajoExtra,
+      descripcion: 'Trabajo actualizado',
+      fecha: DateTime(2026, 8, 21),
+      fechaCreacion: originalMovement.fechaCreacion,
+    );
+
+    final affectedRows = await repository.actualizar(updatedMovement);
+    final savedMovement = (await repository.obtenerTodos()).single;
+
+    expect(affectedRows, 1);
+    expect(savedMovement.id, id);
+    expect(savedMovement.tipo, TipoMovimiento.ingreso);
+    expect(savedMovement.montoEnCentavos, 250000);
+    expect(savedMovement.categoria, CategoriaMovimiento.trabajoExtra);
+    expect(savedMovement.descripcion, 'Trabajo actualizado');
+    expect(savedMovement.fecha, DateTime(2026, 8, 21));
+    expect(savedMovement.fechaCreacion, originalMovement.fechaCreacion);
+  });
+
+  test('rechaza actualizar un movimiento sin id', () async {
+    final movementWithoutId = Movimiento(
+      tipo: TipoMovimiento.gasto,
+      montoEnCentavos: 10000,
+      categoria: CategoriaMovimiento.transporte,
+      fecha: DateTime(2026, 8, 26),
+    );
+
+    expect(() => repository.actualizar(movementWithoutId), throwsArgumentError);
+  });
+
+  test('elimina un movimiento existente por su id', () async {
+    final movement = Movimiento(
+      tipo: TipoMovimiento.gasto,
+      montoEnCentavos: 75000,
+      categoria: CategoriaMovimiento.salud,
+      fecha: DateTime(2026, 8, 26),
+    );
+    final id = await repository.insertar(movement);
+
+    final affectedRows = await repository.eliminar(id);
+    final savedMovements = await repository.obtenerTodos();
+
+    expect(affectedRows, 1);
+    expect(savedMovements, isEmpty);
+  });
+
+  test('rechaza eliminar con un id inválido', () async {
+    expect(() => repository.eliminar(0), throwsArgumentError);
+  });
 }
