@@ -21,6 +21,62 @@ Future<void> _openNewMovementForm(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets('inicia con el tema claro por defecto', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const MyApp());
+
+    expect(
+      Theme.of(tester.element(find.byType(AppShell))).brightness,
+      Brightness.light,
+    );
+  });
+
+  testWidgets('puede iniciar con el tema oscuro guardado', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const MyApp(initialDarkMode: true));
+
+    expect(
+      Theme.of(tester.element(find.byType(AppShell))).brightness,
+      Brightness.dark,
+    );
+  });
+
+  testWidgets('cambia entre modo claro y oscuro desde el menú', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const MyApp());
+
+    await tester.tap(find.byIcon(Icons.menu));
+    await tester.pumpAndSettle();
+
+    var themeSwitch = tester.widget<SwitchListTile>(
+      find.widgetWithText(SwitchListTile, 'Modo nocturno'),
+    );
+    expect(themeSwitch.value, isFalse);
+
+    await tester.tap(find.text('Modo nocturno'));
+    await tester.pumpAndSettle();
+
+    expect(
+      Theme.of(tester.element(find.byType(AppShell))).brightness,
+      Brightness.dark,
+    );
+    themeSwitch = tester.widget<SwitchListTile>(
+      find.widgetWithText(SwitchListTile, 'Modo nocturno'),
+    );
+    expect(themeSwitch.value, isTrue);
+
+    await tester.tap(find.text('Modo nocturno'));
+    await tester.pumpAndSettle();
+
+    expect(
+      Theme.of(tester.element(find.byType(AppShell))).brightness,
+      Brightness.light,
+    );
+  });
+
   testWidgets('Muestra la pantalla inicial', (WidgetTester tester) async {
     await tester.pumpWidget(const MyApp());
 
@@ -151,6 +207,23 @@ void main() {
     await tester.pageBack();
     await tester.pumpAndSettle();
 
+    expect(find.text('Inicio'), findsWidgets);
+  });
+
+  testWidgets('cierra el menú principal desde su encabezado', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const MyApp());
+
+    await tester.tap(find.byIcon(Icons.menu));
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Cerrar menú'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Cerrar menú'));
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Cerrar menú'), findsNothing);
     expect(find.text('Inicio'), findsWidgets);
   });
 

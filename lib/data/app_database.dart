@@ -7,8 +7,9 @@ class AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   static const String databaseName = 'economia_hogar.db';
-  static const int databaseVersion = 1;
+  static const int databaseVersion = 2;
   static const String movementsTable = 'movimientos';
+  static const String settingsTable = 'configuraciones';
 
   Database? _database;
 
@@ -27,6 +28,7 @@ class AppDatabase {
         await database.execute('PRAGMA foreign_keys = ON');
       },
       onCreate: createSchema,
+      onUpgrade: upgradeSchema,
     );
   }
 
@@ -40,6 +42,26 @@ class AppDatabase {
         descripcion TEXT,
         fecha TEXT NOT NULL,
         fecha_creacion TEXT NOT NULL
+      )
+    ''');
+    await _createSettingsTable(database);
+  }
+
+  static Future<void> upgradeSchema(
+    Database database,
+    int oldVersion,
+    int newVersion,
+  ) async {
+    if (oldVersion < 2) {
+      await _createSettingsTable(database);
+    }
+  }
+
+  static Future<void> _createSettingsTable(Database database) async {
+    await database.execute('''
+      CREATE TABLE $settingsTable (
+        clave TEXT PRIMARY KEY,
+        valor TEXT NOT NULL
       )
     ''');
   }

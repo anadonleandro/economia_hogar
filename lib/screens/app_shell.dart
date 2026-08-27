@@ -11,10 +11,18 @@ import 'new_movement_screen.dart';
 import 'summary_screen.dart';
 
 class AppShell extends StatefulWidget {
-  const AppShell({super.key, this.movementRepository, this.movementsLoader});
+  const AppShell({
+    super.key,
+    this.movementRepository,
+    this.movementsLoader,
+    this.darkModeEnabled = false,
+    this.onDarkModeChanged,
+  });
 
   final MovimientoRepository? movementRepository;
   final Future<List<Movimiento>> Function()? movementsLoader;
+  final bool darkModeEnabled;
+  final ValueChanged<bool>? onDarkModeChanged;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -222,22 +230,40 @@ class _AppShellState extends State<AppShell> {
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.primaryContainer,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
+              child: Stack(
                 children: [
-                  Icon(
-                    Icons.account_balance_wallet_outlined,
-                    size: 40,
-                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Icon(
+                        Icons.account_balance_wallet_outlined,
+                        size: 40,
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Economía del Hogar',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Economía del Hogar',
-                    style: Theme.of(context).textTheme.titleLarge,
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      tooltip: 'Cerrar menú',
+                      icon: const Icon(Icons.menu),
+                    ),
                   ),
                 ],
               ),
+            ),
+            SwitchListTile(
+              secondary: const Icon(Icons.dark_mode_outlined),
+              title: const Text('Modo nocturno'),
+              value: widget.darkModeEnabled,
+              onChanged: widget.onDarkModeChanged,
             ),
             ListTile(
               leading: const Icon(Icons.info_outline),
