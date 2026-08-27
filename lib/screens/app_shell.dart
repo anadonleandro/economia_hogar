@@ -428,22 +428,18 @@ class _AppShellState extends State<AppShell> {
       drawer: _buildDrawer(),
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Row(
-          children: [
-            Text(_titles[_selectedIndex]),
-            if (_selectedIndex == 1) ...[
-              const SizedBox(width: 12),
-              FilledButton.tonal(
+        title: Text(_titles[_selectedIndex]),
+        actions: [
+          if (_selectedIndex == 1)
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: IconButton.filled(
                 onPressed: () => _openNewMovementForm(),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  visualDensity: VisualDensity.compact,
-                ),
-                child: const Text('Nuevo movimiento'),
+                tooltip: 'Nuevo movimiento',
+                icon: const Icon(Icons.add),
               ),
-            ],
-          ],
-        ),
+            ),
+        ],
       ),
       body: _buildBody(),
       bottomNavigationBar: NavigationBar(

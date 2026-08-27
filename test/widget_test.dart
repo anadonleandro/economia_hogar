@@ -12,11 +12,17 @@ import 'package:economia_hogar/screens/new_movement_screen.dart';
 import 'package:economia_hogar/screens/movements_screen.dart';
 import 'package:economia_hogar/screens/app_shell.dart';
 import 'package:economia_hogar/screens/summary_screen.dart';
+import 'package:economia_hogar/widgets/selection_filter_menu.dart';
 
 Future<void> _openNewMovementForm(WidgetTester tester) async {
   await tester.tap(find.text('Movimientos'));
   await tester.pumpAndSettle();
-  await tester.tap(find.text('Nuevo movimiento'));
+  await tester.tap(find.byTooltip('Nuevo movimiento'));
+  await tester.pumpAndSettle();
+}
+
+Future<void> _expandMovementFilters(WidgetTester tester) async {
+  await tester.tap(find.byKey(const ValueKey('movement_filters_header')));
   await tester.pumpAndSettle();
 }
 
@@ -90,12 +96,12 @@ void main() {
     );
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.byType(FloatingActionButton), findsNothing);
-    expect(find.text('Nuevo movimiento'), findsNothing);
+    expect(find.byTooltip('Nuevo movimiento'), findsNothing);
 
     await tester.tap(find.text('Movimientos'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Nuevo movimiento'), findsOneWidget);
+    expect(find.byTooltip('Nuevo movimiento'), findsOneWidget);
   });
 
   testWidgets('muestra el estado de carga inicial', (
@@ -502,9 +508,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Compra supermercado'), findsOneWidget);
-    expect(find.textContaining('Alimentos ·'), findsOneWidget);
-    expect(find.text(r'- $ 45.300,50'), findsOneWidget);
-    expect(find.text('Nuevo movimiento'), findsOneWidget);
+    expect(find.text('Alimentos'), findsOneWidget);
+    expect(find.text(r'- $ 45.300,50'), findsNWidgets(2));
+    expect(find.byTooltip('Nuevo movimiento'), findsOneWidget);
   });
 
   testWidgets('Actualiza el resumen mensual de Inicio', (
@@ -589,6 +595,7 @@ void main() {
     expect(find.text('Movimiento 3'), findsOneWidget);
     expect(find.text('Movimiento de ayer'), findsNothing);
     expect(find.byType(Scrollbar), findsOneWidget);
+    expect(find.byIcon(Icons.restaurant_outlined), findsWidgets);
 
     final nextDayButton = tester.widget<IconButton>(
       find.widgetWithIcon(IconButton, Icons.chevron_right),
@@ -702,7 +709,9 @@ void main() {
     await tester.tap(saveButton);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Eliminar movimiento'));
+    await tester.tap(find.byTooltip('Acciones del movimiento'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('movement_action_delete')));
     await tester.pumpAndSettle();
 
     expect(find.byType(AlertDialog), findsOneWidget);
@@ -718,7 +727,9 @@ void main() {
 
     expect(find.text('Movimiento para eliminar'), findsOneWidget);
 
-    await tester.tap(find.byTooltip('Eliminar movimiento'));
+    await tester.tap(find.byTooltip('Acciones del movimiento'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('movement_action_delete')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Eliminar'));
     await tester.pumpAndSettle();
@@ -766,6 +777,12 @@ void main() {
     expect(find.text('Ingreso visible'), findsOneWidget);
     expect(find.text('Gasto visible'), findsOneWidget);
     expect(find.text('Gasto anterior'), findsOneWidget);
+    expect(find.byIcon(Icons.payments_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.restaurant_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.directions_car_outlined), findsOneWidget);
+
+    expect(find.byTooltip('Filtrar por tipo'), findsNothing);
+    await _expandMovementFilters(tester);
 
     await tester.tap(find.byTooltip('Filtrar por tipo'));
     await tester.pumpAndSettle();
@@ -823,7 +840,323 @@ void main() {
     expect(find.text('Ingreso visible'), findsOneWidget);
     expect(find.text('Gasto visible'), findsOneWidget);
     expect(find.text('Gasto anterior'), findsOneWidget);
-    expect(find.text('Todos'), findsNWidgets(3));
+    expect(find.text('Filtros'), findsOneWidget);
+    expect(find.byTooltip('Filtrar por tipo'), findsNothing);
+  });
+
+  testWidgets('muestra el detalle y permite editar desde el modal', (
+    WidgetTester tester,
+  ) async {
+    final movement = Movimiento(
+      id: 12,
+      tipo: TipoMovimiento.gasto,
+      montoEnCentavos: 123456,
+      categoria: CategoriaMovimiento.servicios,
+      descripcion: 'Detalle visible',
+      fecha: DateTime(2026, 8, 26),
+      fechaCreacion: DateTime(2026, 8, 26, 18, 45),
+    );
+    Movimiento? movementToEdit;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: MovementsScreen(
+            movements: [movement],
+            onMovementTap: (selectedMovement) {
+              movementToEdit = selectedMovement;
+            },
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Detalle visible'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Detalle del movimiento'), findsOneWidget);
+    expect(find.text('Descripción'), findsOneWidget);
+    expect(find.text('Fecha del movimiento'), findsOneWidget);
+    expect(find.text('26/08/2026'), findsOneWidget);
+    expect(find.text('Fecha de creación'), findsOneWidget);
+    expect(find.text('26/08/2026 18:45'), findsOneWidget);
+    expect(find.text(r'- $ 1.234,56'), findsWidgets);
+
+    await tester.tap(find.text('Editar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Detalle del movimiento'), findsNothing);
+    expect(movementToEdit, same(movement));
+
+    movementToEdit = null;
+    await tester.tap(find.byTooltip('Acciones del movimiento'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('movement_action_edit')));
+    await tester.pumpAndSettle();
+
+    expect(movementToEdit, same(movement));
+  });
+
+  testWidgets('agrupa los movimientos por fecha y los ordena', (
+    WidgetTester tester,
+  ) async {
+    final today = DateUtils.dateOnly(DateTime.now());
+    final yesterday = today.subtract(const Duration(days: 1));
+    final olderDate = today.subtract(const Duration(days: 2));
+    final movements = [
+      Movimiento(
+        tipo: TipoMovimiento.gasto,
+        montoEnCentavos: 10000,
+        categoria: CategoriaMovimiento.alimentos,
+        descripcion: 'Movimiento temprano',
+        fecha: today,
+        fechaCreacion: today.add(const Duration(hours: 8)),
+      ),
+      Movimiento(
+        tipo: TipoMovimiento.ingreso,
+        montoEnCentavos: 20000,
+        categoria: CategoriaMovimiento.sueldo,
+        descripcion: 'Movimiento reciente',
+        fecha: today,
+        fechaCreacion: today.add(const Duration(hours: 18)),
+      ),
+      Movimiento(
+        tipo: TipoMovimiento.gasto,
+        montoEnCentavos: 30000,
+        categoria: CategoriaMovimiento.transporte,
+        descripcion: 'Movimiento de ayer',
+        fecha: yesterday,
+      ),
+      Movimiento(
+        tipo: TipoMovimiento.gasto,
+        montoEnCentavos: 40000,
+        categoria: CategoriaMovimiento.salud,
+        descripcion: 'Movimiento anterior',
+        fecha: olderDate,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: MovementsScreen(movements: movements)),
+      ),
+    );
+
+    expect(find.text('Hoy · 2 movimientos'), findsOneWidget);
+    expect(find.text('Ayer · 1 movimiento'), findsOneWidget);
+    expect(
+      find.text(
+        '${olderDate.day} de ${monthNames[olderDate.month - 1].toLowerCase()} de ${olderDate.year} · 1 movimiento',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      tester.getTopLeft(find.text('Movimiento reciente')).dy,
+      lessThan(tester.getTopLeft(find.text('Movimiento temprano')).dy),
+    );
+
+    final todayHeader = find.byKey(
+      ValueKey(
+        'movement_date_header_${today.year}-${today.month}-${today.day}',
+      ),
+    );
+
+    await tester.tap(todayHeader);
+    await tester.pump();
+
+    expect(todayHeader, findsOneWidget);
+    expect(find.text('Movimiento reciente'), findsNothing);
+    expect(find.text('Movimiento temprano'), findsNothing);
+    expect(
+      find.descendant(
+        of: todayHeader,
+        matching: find.byIcon(Icons.keyboard_arrow_down),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(todayHeader);
+    await tester.pump();
+
+    expect(find.text('Movimiento reciente'), findsOneWidget);
+    expect(find.text('Movimiento temprano'), findsOneWidget);
+  });
+
+  testWidgets('filtra categorías según el tipo seleccionado', (
+    WidgetTester tester,
+  ) async {
+    final movements = [
+      Movimiento(
+        tipo: TipoMovimiento.gasto,
+        montoEnCentavos: 10000,
+        categoria: CategoriaMovimiento.alimentos,
+        descripcion: 'Compra semanal',
+        fecha: DateTime.now(),
+      ),
+      Movimiento(
+        tipo: TipoMovimiento.gasto,
+        montoEnCentavos: 20000,
+        categoria: CategoriaMovimiento.transporte,
+        descripcion: 'Carga de combustible',
+        fecha: DateTime.now(),
+      ),
+      Movimiento(
+        tipo: TipoMovimiento.ingreso,
+        montoEnCentavos: 30000,
+        categoria: CategoriaMovimiento.sueldo,
+        descripcion: 'Pago mensual',
+        fecha: DateTime.now(),
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: MovementsScreen(movements: movements)),
+      ),
+    );
+
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('movement_query_count')),
+        matching: find.text('3 resultados'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('movement_query_income')),
+        matching: find.text(r'+ $ 300,00'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('movement_query_expenses')),
+        matching: find.text(r'- $ 300,00'),
+      ),
+      findsOneWidget,
+    );
+
+    expect(find.byTooltip('Filtrar por categoría'), findsNothing);
+    await _expandMovementFilters(tester);
+
+    await tester.tap(find.byTooltip('Filtrar por categoría'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('movement_category_filter_all')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('movement_category_filter_alimentos')),
+      findsNothing,
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('movement_category_filter_all')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Filtrar por tipo'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('movement_type_filter_expense')),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Filtrar por categoría'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('movement_category_filter_alimentos')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('movement_category_filter_transporte')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('movement_category_filter_sueldo')),
+      findsNothing,
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('movement_category_filter_alimentos')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Compra semanal'), findsOneWidget);
+    expect(find.text('Carga de combustible'), findsNothing);
+    expect(find.text('Pago mensual'), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('movement_query_count')),
+        matching: find.text('1 resultado'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('movement_query_expenses')),
+        matching: find.text(r'- $ 100,00'),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byTooltip('Filtrar por tipo'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('movement_type_filter_income')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pago mensual'), findsOneWidget);
+    expect(
+      tester
+          .widget<SelectionFilterMenu<String>>(
+            find.byType(SelectionFilterMenu<String>),
+          )
+          .selectedLabel,
+      'Todos',
+    );
+  });
+
+  testWidgets('permite limpiar una consulta sin resultados', (
+    WidgetTester tester,
+  ) async {
+    final movement = Movimiento(
+      tipo: TipoMovimiento.ingreso,
+      montoEnCentavos: 100000,
+      categoria: CategoriaMovimiento.sueldo,
+      descripcion: 'Único ingreso',
+      fecha: DateTime.now(),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: MovementsScreen(movements: [movement])),
+      ),
+    );
+    await _expandMovementFilters(tester);
+
+    await tester.tap(find.byTooltip('Filtrar por tipo'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('movement_type_filter_expense')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('No encontramos movimientos'), findsOneWidget);
+    expect(
+      find.text('Probá modificando los filtros seleccionados.'),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('empty_clear_movement_filters')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Único ingreso'), findsOneWidget);
+    expect(find.text('Filtros'), findsOneWidget);
+    expect(find.byTooltip('Filtrar por tipo'), findsNothing);
   });
 
   testWidgets('selecciona el período del resumen mensual', (

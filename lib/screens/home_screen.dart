@@ -4,6 +4,7 @@ import '../constants/month_names.dart';
 import '../models/movimiento.dart';
 import '../models/resumen_mensual.dart';
 import '../models/tipo_movimiento.dart';
+import '../utils/categoria_movimiento_icon.dart';
 import '../utils/monto_formatter.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -392,7 +393,7 @@ class _TodayMovementsCardState extends State<_TodayMovementsCard> {
         leading: CircleAvatar(
           backgroundColor: color.withAlpha(32),
           foregroundColor: color,
-          child: Icon(isIncome ? Icons.south_west : Icons.north_east),
+          child: Icon(categoriaMovimientoIcon(movement.categoria)),
         ),
         title: Text(
           description == null || description.isEmpty
