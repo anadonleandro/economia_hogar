@@ -36,6 +36,7 @@ class _AppShellState extends State<AppShell> {
 
   int _selectedIndex = 0;
   int _homeResetVersion = 0;
+  int _movementsResetVersion = 0;
   DateTime _selectedHomeDate = DateUtils.dateOnly(DateTime.now());
   bool _isLoadingMovements = false;
   String? _loadErrorMessage;
@@ -170,6 +171,7 @@ class _AppShellState extends State<AppShell> {
         onMovementTap: _editMovement,
       ),
       MovementsScreen(
+        key: ValueKey(_movementsResetVersion),
         movements: List.unmodifiable(_movements),
         onMovementTap: _editMovement,
         onDeleteMovement: _confirmDeleteMovement,
@@ -209,6 +211,8 @@ class _AppShellState extends State<AppShell> {
       if (index == 0) {
         _selectedHomeDate = DateUtils.dateOnly(DateTime.now());
         _homeResetVersion++;
+      } else if (index == 1) {
+        _movementsResetVersion++;
       }
     });
   }
@@ -364,6 +368,9 @@ class _AppShellState extends State<AppShell> {
     Movimiento? initialMovement,
     TipoMovimiento? initialType,
   }) async {
+    final successMessage = initialMovement == null
+        ? 'Movimiento guardado.'
+        : 'Movimiento actualizado.';
     final movement = await Navigator.of(context).push<Movimiento>(
       MaterialPageRoute(
         builder: (context) => NewMovementScreen(
@@ -389,7 +396,9 @@ class _AppShellState extends State<AppShell> {
           _movements.add(movement);
         }
         _selectedIndex = 1;
+        _movementsResetVersion++;
       });
+      _showMessage(successMessage);
       return;
     }
 
@@ -410,7 +419,9 @@ class _AppShellState extends State<AppShell> {
           ..clear()
           ..addAll(movements);
         _selectedIndex = 1;
+        _movementsResetVersion++;
       });
+      _showMessage(successMessage);
     } catch (_) {
       if (!mounted) {
         return;
@@ -436,6 +447,10 @@ class _AppShellState extends State<AppShell> {
               child: IconButton.filled(
                 onPressed: () => _openNewMovementForm(),
                 tooltip: 'Nuevo movimiento',
+                style: IconButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                ),
                 icon: const Icon(Icons.add),
               ),
             ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../constants/app_icons.dart';
 import '../models/categoria_movimiento.dart';
 
 IconData categoriaMovimientoIcon(CategoriaMovimiento categoria) {
@@ -12,11 +13,11 @@ IconData categoriaMovimientoIcon(CategoriaMovimiento categoria) {
     CategoriaMovimiento.educacion => Icons.school_outlined,
     CategoriaMovimiento.ocio => Icons.movie_outlined,
     CategoriaMovimiento.ropa => Icons.checkroom_outlined,
-    CategoriaMovimiento.otrosGastos => Icons.more_horiz,
+    CategoriaMovimiento.otrosGastos => AppIcons.other,
     CategoriaMovimiento.sueldo => Icons.payments_outlined,
     CategoriaMovimiento.trabajoExtra => Icons.work_outline,
     CategoriaMovimiento.venta => Icons.sell_outlined,
     CategoriaMovimiento.inversion => Icons.trending_up,
-    CategoriaMovimiento.otrosIngresos => Icons.savings_outlined,
+    CategoriaMovimiento.otrosIngresos => AppIcons.other,
   };
 }

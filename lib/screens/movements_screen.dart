@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../constants/app_icons.dart';
 import '../constants/month_names.dart';
 import '../models/categoria_movimiento.dart';
 import '../models/movimiento.dart';
@@ -30,12 +31,14 @@ class MovementsScreen extends StatefulWidget {
 
 class _MovementsScreenState extends State<MovementsScreen> {
   static const String _allCategories = 'all';
+  static const int _dateGroupsPerPage = 7;
   _MovementTypeFilter _selectedTypeFilter = _MovementTypeFilter.all;
   int _selectedMonth = 0;
   int _selectedYear = 0;
   String _selectedCategory = _allCategories;
   final Set<String> _collapsedDateGroups = {};
   bool _filtersExpanded = false;
+  int _visibleDateGroupCount = _dateGroupsPerPage;
 
   TipoMovimiento? get _selectedType {
     return switch (_selectedTypeFilter) {
@@ -150,24 +153,38 @@ class _MovementsScreenState extends State<MovementsScreen> {
     setState(() {
       _selectedTypeFilter = filter;
       _selectedCategory = _allCategories;
+      _resetPagination();
     });
   }
 
   void _selectMonth(int month) {
     setState(() {
       _selectedMonth = month;
+      _resetPagination();
     });
   }
 
   void _selectYear(int year) {
     setState(() {
       _selectedYear = year;
+      _resetPagination();
     });
   }
 
   void _selectCategory(String category) {
     setState(() {
       _selectedCategory = category;
+      _resetPagination();
+    });
+  }
+
+  void _resetPagination() {
+    _visibleDateGroupCount = _dateGroupsPerPage;
+  }
+
+  void _showMoreDateGroups() {
+    setState(() {
+      _visibleDateGroupCount += _dateGroupsPerPage;
     });
   }
 
@@ -178,6 +195,7 @@ class _MovementsScreenState extends State<MovementsScreen> {
       _selectedMonth = 0;
       _selectedYear = 0;
       _filtersExpanded = false;
+      _resetPagination();
     });
   }
 
@@ -205,6 +223,17 @@ class _MovementsScreenState extends State<MovementsScreen> {
     }
 
     final filteredMovements = _filteredMovements;
+    final filteredDateKeys = filteredMovements
+        .map((movement) => _dateKey(movement.fecha))
+        .toSet()
+        .toList(growable: false);
+    final visibleDateKeys = filteredDateKeys
+        .take(_visibleDateGroupCount)
+        .toSet();
+    final visibleMovements = filteredMovements
+        .where((movement) => visibleDateKeys.contains(_dateKey(movement.fecha)))
+        .toList(growable: false);
+    final hasMoreDateGroups = visibleDateKeys.length < filteredDateKeys.length;
 
     return Column(
       children: [
@@ -231,6 +260,13 @@ class _MovementsScreenState extends State<MovementsScreen> {
                                 _MovementTypeFilter.all => 'Todos',
                                 _MovementTypeFilter.income => 'Ingresos',
                                 _MovementTypeFilter.expense => 'Gastos',
+                              },
+                              icon: switch (filter) {
+                                _MovementTypeFilter.all => AppIcons.all,
+                                _MovementTypeFilter.income =>
+                                  Icons.savings_outlined,
+                                _MovementTypeFilter.expense =>
+                                  Icons.shopping_bag_outlined,
                               },
                               key: 'movement_type_filter_${filter.name}',
                             ),
@@ -302,11 +338,13 @@ class _MovementsScreenState extends State<MovementsScreen> {
                             value: _allCategories,
                             label: 'Todos',
                             key: 'movement_category_filter_all',
+                            icon: AppIcons.all,
                           ),
                           for (final category in _availableCategories)
                             SelectionOption(
                               value: category.name,
                               label: category.nombre,
+                              icon: categoriaMovimientoIcon(category),
                               key: 'movement_category_filter_${category.name}',
                             ),
                         ],
@@ -333,7 +371,20 @@ class _MovementsScreenState extends State<MovementsScreen> {
               ? _buildEmptyQueryState()
               : ListView(
                   padding: const EdgeInsets.symmetric(vertical: 8),
-                  children: _buildGroupedMovements(filteredMovements),
+                  children: [
+                    ..._buildGroupedMovements(visibleMovements),
+                    if (hasMoreDateGroups)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                        child: Center(
+                          child: TextButton(
+                            key: const ValueKey('show_more_movements'),
+                            onPressed: _showMoreDateGroups,
+                            child: const Text('Ver más'),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
         ),
       ],
@@ -735,6 +786,8 @@ class _MovementsScreenState extends State<MovementsScreen> {
         description == null || description.isEmpty
             ? movement.categoria.nombre
             : description,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
       ),
       subtitle: Text(movement.categoria.nombre),
       trailing: Row(

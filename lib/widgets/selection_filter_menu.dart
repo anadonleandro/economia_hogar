@@ -5,11 +5,13 @@ class SelectionOption<T> {
     required this.value,
     required this.label,
     required this.key,
+    this.icon,
   });
 
   final T value;
   final String label;
   final String key;
+  final IconData? icon;
 }
 
 class SelectionFilterMenu<T> extends StatelessWidget {
@@ -45,7 +47,15 @@ class SelectionFilterMenu<T> extends StatelessWidget {
             key: ValueKey(option.key),
             value: option.value,
             checked: option.value == selectedValue,
-            child: Text(option.label),
+            child: Row(
+              children: [
+                if (option.icon != null) ...[
+                  Icon(option.icon, size: 20),
+                  const SizedBox(width: 10),
+                ],
+                Text(option.label),
+              ],
+            ),
           );
         }).toList();
       },

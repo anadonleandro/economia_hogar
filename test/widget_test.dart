@@ -162,15 +162,27 @@ void main() {
     await tester.tap(find.byTooltip('Agregar ingreso'));
     await tester.pumpAndSettle();
 
-    var selector = tester.widget<SegmentedButton<TipoMovimiento>>(
-      find.byType(SegmentedButton<TipoMovimiento>),
-    );
     var categoryMenu = tester.widget<DropdownMenu<CategoriaMovimiento>>(
       find.byType(DropdownMenu<CategoriaMovimiento>),
     );
 
-    expect(selector.selected, {TipoMovimiento.ingreso});
     expect(categoryMenu.initialSelection, CategoriaMovimiento.sueldo);
+    expect(
+      tester
+          .widget<OutlinedButton>(
+            find.byKey(const ValueKey('movement_type_gasto')),
+          )
+          .onPressed,
+      isNull,
+    );
+    expect(
+      tester
+          .widget<OutlinedButton>(
+            find.byKey(const ValueKey('movement_type_ingreso')),
+          )
+          .onPressed,
+      isNotNull,
+    );
 
     await tester.pageBack();
     await tester.pumpAndSettle();
@@ -178,15 +190,27 @@ void main() {
     await tester.tap(find.byTooltip('Agregar gasto'));
     await tester.pumpAndSettle();
 
-    selector = tester.widget<SegmentedButton<TipoMovimiento>>(
-      find.byType(SegmentedButton<TipoMovimiento>),
-    );
     categoryMenu = tester.widget<DropdownMenu<CategoriaMovimiento>>(
       find.byType(DropdownMenu<CategoriaMovimiento>),
     );
 
-    expect(selector.selected, {TipoMovimiento.gasto});
     expect(categoryMenu.initialSelection, CategoriaMovimiento.alimentos);
+    expect(
+      tester
+          .widget<OutlinedButton>(
+            find.byKey(const ValueKey('movement_type_gasto')),
+          )
+          .onPressed,
+      isNotNull,
+    );
+    expect(
+      tester
+          .widget<OutlinedButton>(
+            find.byKey(const ValueKey('movement_type_ingreso')),
+          )
+          .onPressed,
+      isNull,
+    );
   });
 
   testWidgets('abre Acerca de desde el menú principal', (
@@ -278,6 +302,110 @@ void main() {
     expect(find.text('Sin movimientos en este período.'), findsOneWidget);
   });
 
+  testWidgets('restablece Movimientos al volver a tocar su navegación', (
+    WidgetTester tester,
+  ) async {
+    final movement = Movimiento(
+      tipo: TipoMovimiento.ingreso,
+      montoEnCentavos: 100000,
+      categoria: CategoriaMovimiento.sueldo,
+      fecha: DateTime.now(),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(home: AppShell(movementsLoader: () async => [movement])),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Movimientos').last);
+    await tester.pumpAndSettle();
+    await _expandMovementFilters(tester);
+    await tester.tap(find.byTooltip('Filtrar por tipo'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('movement_type_filter_all')),
+        matching: find.byIcon(Icons.format_list_bulleted),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('movement_type_filter_income')),
+        matching: find.byIcon(Icons.savings_outlined),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('movement_type_filter_expense')),
+        matching: find.byIcon(Icons.shopping_bag_outlined),
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const ValueKey('movement_type_filter_income')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Filtros · 1 activo'), findsOneWidget);
+
+    await tester.tap(find.text('Movimientos').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Filtros'), findsOneWidget);
+    expect(find.text('Filtros · 1 activo'), findsNothing);
+    expect(find.byTooltip('Filtrar por tipo'), findsNothing);
+  });
+
+  testWidgets('restablece Movimientos después de guardar', (
+    WidgetTester tester,
+  ) async {
+    final existingMovement = Movimiento(
+      tipo: TipoMovimiento.ingreso,
+      montoEnCentavos: 100000,
+      categoria: CategoriaMovimiento.sueldo,
+      descripcion: 'Ingreso existente',
+      fecha: DateTime.now(),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AppShell(movementsLoader: () async => [existingMovement]),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Movimientos').last);
+    await tester.pumpAndSettle();
+    await _expandMovementFilters(tester);
+    await tester.tap(find.byTooltip('Filtrar por tipo'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('movement_type_filter_income')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Filtros · 1 activo'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Nuevo movimiento'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Importe'),
+      '500',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Descripción (opcional)'),
+      'Nuevo gasto visible',
+    );
+    await tester.ensureVisible(find.text('Guardar'));
+    await tester.tap(find.text('Guardar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nuevo gasto visible'), findsOneWidget);
+    expect(find.text('Movimiento guardado.'), findsOneWidget);
+    expect(find.text('Filtros'), findsOneWidget);
+    expect(find.text('Filtros · 1 activo'), findsNothing);
+    expect(find.byTooltip('Filtrar por tipo'), findsNothing);
+  });
+
   testWidgets('Abre y cierra la pantalla de nuevo movimiento', (
     WidgetTester tester,
   ) async {
@@ -285,8 +413,30 @@ void main() {
 
     await _openNewMovementForm(tester);
 
-    expect(find.text('Tipo de movimiento'), findsOneWidget);
-    expect(find.byType(SegmentedButton<TipoMovimiento>), findsOneWidget);
+    expect(find.byKey(const ValueKey('movement_type_gasto')), findsOneWidget);
+    expect(find.byKey(const ValueKey('movement_type_ingreso')), findsOneWidget);
+    final saveButton = find.byKey(const ValueKey('save_movement_button'));
+    expect(saveButton, findsOneWidget);
+    final formScaffold = tester.widget<Scaffold>(
+      find.ancestor(of: saveButton, matching: find.byType(Scaffold)),
+    );
+    expect(formScaffold.bottomNavigationBar, isNotNull);
+    expect(
+      tester
+          .widget<OutlinedButton>(
+            find.byKey(const ValueKey('movement_type_gasto')),
+          )
+          .onPressed,
+      isNotNull,
+    );
+    expect(
+      tester
+          .widget<OutlinedButton>(
+            find.byKey(const ValueKey('movement_type_ingreso')),
+          )
+          .onPressed,
+      isNotNull,
+    );
 
     await tester.pageBack();
     await tester.pumpAndSettle();
@@ -297,6 +447,93 @@ void main() {
     );
   });
 
+  testWidgets('advierte al salir con cambios sin guardar', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const MyApp());
+    await _openNewMovementForm(tester);
+
+    final amountField = find.widgetWithText(TextFormField, 'Importe');
+    await tester.enterText(amountField, '2500');
+    await tester.pump();
+    expect(
+      tester
+          .widget<PopScope<Movimiento>>(find.byType(PopScope<Movimiento>))
+          .canPop,
+      isFalse,
+    );
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    final warningDialog = find.byType(AlertDialog);
+    expect(find.text('Cambios sin guardar'), findsOneWidget);
+    expect(find.text('Seguir editando'), findsOneWidget);
+    expect(find.text('Salir sin guardar'), findsOneWidget);
+    expect(
+      find.descendant(of: warningDialog, matching: find.text('Guardar')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Seguir editando'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nuevo movimiento'), findsOneWidget);
+    expect(find.text('2500'), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Salir sin guardar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nuevo movimiento'), findsNothing);
+    expect(
+      find.text('Todavía no hay movimientos registrados.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('valida y guarda desde el aviso de cambios', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const MyApp());
+    await _openNewMovementForm(tester);
+
+    final amountField = find.widgetWithText(TextFormField, 'Importe');
+    final descriptionField = find.widgetWithText(
+      TextFormField,
+      'Descripción (opcional)',
+    );
+    await tester.enterText(descriptionField, 'Guardado desde el aviso');
+    await tester.pump();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('Guardar'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ingresá un monto.'), findsOneWidget);
+    expect(find.text('Nuevo movimiento'), findsOneWidget);
+
+    await tester.enterText(amountField, '3500');
+    await tester.pump();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('Guardar'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Guardado desde el aviso'), findsOneWidget);
+    expect(find.text('Nuevo movimiento'), findsNothing);
+  });
+
   testWidgets('Permite seleccionar el tipo de movimiento', (
     WidgetTester tester,
   ) async {
@@ -304,20 +541,18 @@ void main() {
 
     await _openNewMovementForm(tester);
 
-    var selector = tester.widget<SegmentedButton<TipoMovimiento>>(
-      find.byType(SegmentedButton<TipoMovimiento>),
+    var categoryMenu = tester.widget<DropdownMenu<CategoriaMovimiento>>(
+      find.byType(DropdownMenu<CategoriaMovimiento>),
     );
-
-    expect(selector.selected, {TipoMovimiento.gasto});
+    expect(categoryMenu.initialSelection, CategoriaMovimiento.alimentos);
 
     await tester.tap(find.text('Ingreso'));
     await tester.pumpAndSettle();
 
-    selector = tester.widget<SegmentedButton<TipoMovimiento>>(
-      find.byType(SegmentedButton<TipoMovimiento>),
+    categoryMenu = tester.widget<DropdownMenu<CategoriaMovimiento>>(
+      find.byType(DropdownMenu<CategoriaMovimiento>),
     );
-
-    expect(selector.selected, {TipoMovimiento.ingreso});
+    expect(categoryMenu.initialSelection, CategoriaMovimiento.sueldo);
   });
 
   testWidgets('Filtra las categorías según el tipo de movimiento', (
@@ -375,9 +610,15 @@ void main() {
 
     await _openNewMovementForm(tester);
 
-    final amountField = find.widgetWithText(TextFormField, 'Monto');
+    final amountField = find.widgetWithText(TextFormField, 'Importe');
+    final categoryField = find.byType(DropdownMenu<CategoriaMovimiento>);
 
     expect(amountField, findsOneWidget);
+    expect(find.text(r'$'), findsOneWidget);
+    expect(
+      tester.getTopLeft(amountField).dy,
+      lessThan(tester.getTopLeft(categoryField).dy),
+    );
 
     await tester.enterText(amountField, '45300,50');
 
@@ -389,7 +630,7 @@ void main() {
 
     await _openNewMovementForm(tester);
 
-    final amountField = find.widgetWithText(TextFormField, 'Monto');
+    final amountField = find.widgetWithText(TextFormField, 'Importe');
 
     await tester.enterText(amountField, '1');
     await tester.enterText(amountField, '');
@@ -495,7 +736,7 @@ void main() {
     expect(find.text('Ingresá un monto.'), findsOneWidget);
     expect(find.text('Nuevo movimiento'), findsOneWidget);
 
-    final amountField = find.widgetWithText(TextFormField, 'Monto');
+    final amountField = find.widgetWithText(TextFormField, 'Importe');
     final descriptionField = find.widgetWithText(
       TextFormField,
       'Descripción (opcional)',
@@ -522,7 +763,7 @@ void main() {
 
     await _openNewMovementForm(tester);
 
-    final amountField = find.widgetWithText(TextFormField, 'Monto');
+    final amountField = find.widgetWithText(TextFormField, 'Importe');
     final saveButton = find.text('Guardar');
 
     await tester.enterText(amountField, '1000');
@@ -677,11 +918,22 @@ void main() {
     expect(find.text('Trabajo del fin de semana'), findsOneWidget);
     expect(find.text('19/08/2026'), findsOneWidget);
     expect(find.text('Guardar cambios'), findsOneWidget);
-
-    final selector = tester.widget<SegmentedButton<TipoMovimiento>>(
-      find.byType(SegmentedButton<TipoMovimiento>),
+    expect(
+      tester
+          .widget<OutlinedButton>(
+            find.byKey(const ValueKey('movement_type_gasto')),
+          )
+          .onPressed,
+      isNotNull,
     );
-    expect(selector.selected, {TipoMovimiento.ingreso});
+    expect(
+      tester
+          .widget<OutlinedButton>(
+            find.byKey(const ValueKey('movement_type_ingreso')),
+          )
+          .onPressed,
+      isNotNull,
+    );
 
     final categoryMenu = tester.widget<DropdownMenu<CategoriaMovimiento>>(
       find.byType(DropdownMenu<CategoriaMovimiento>),
@@ -696,7 +948,7 @@ void main() {
 
     await _openNewMovementForm(tester);
 
-    final amountField = find.widgetWithText(TextFormField, 'Monto');
+    final amountField = find.widgetWithText(TextFormField, 'Importe');
     final descriptionField = find.widgetWithText(
       TextFormField,
       'Descripción (opcional)',
@@ -871,6 +1123,12 @@ void main() {
       ),
     );
 
+    final movementDescription = tester.widget<Text>(
+      find.text('Detalle visible'),
+    );
+    expect(movementDescription.maxLines, 2);
+    expect(movementDescription.overflow, TextOverflow.ellipsis);
+
     await tester.tap(find.text('Detalle visible'));
     await tester.pumpAndSettle();
 
@@ -895,6 +1153,38 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(movementToEdit, same(movement));
+  });
+
+  testWidgets('confirma una edición guardada', (WidgetTester tester) async {
+    final movement = Movimiento(
+      id: 20,
+      tipo: TipoMovimiento.gasto,
+      montoEnCentavos: 50000,
+      categoria: CategoriaMovimiento.alimentos,
+      descripcion: 'Descripción original',
+      fecha: DateTime.now(),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(home: AppShell(movementsLoader: () async => [movement])),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Movimientos').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Descripción original'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Editar'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Descripción (opcional)'),
+      'Descripción actualizada',
+    );
+    await tester.tap(find.text('Guardar cambios'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Descripción actualizada'), findsOneWidget);
+    expect(find.text('Movimiento actualizado.'), findsOneWidget);
   });
 
   testWidgets('agrupa los movimientos por fecha y los ordena', (
@@ -980,6 +1270,43 @@ void main() {
 
     expect(find.text('Movimiento reciente'), findsOneWidget);
     expect(find.text('Movimiento temprano'), findsOneWidget);
+  });
+
+  testWidgets('muestra siete días con movimientos y permite ver más', (
+    WidgetTester tester,
+  ) async {
+    final today = DateUtils.dateOnly(DateTime.now());
+    final movements = [
+      for (var index = 0; index < 9; index++)
+        Movimiento(
+          tipo: TipoMovimiento.gasto,
+          montoEnCentavos: 10000 + index,
+          categoria: CategoriaMovimiento.alimentos,
+          descripcion: 'Movimiento día $index',
+          fecha: today.subtract(Duration(days: index)),
+        ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: MovementsScreen(movements: movements)),
+      ),
+    );
+
+    expect(find.text('Movimiento día 0'), findsOneWidget);
+    expect(find.text('Movimiento día 7'), findsNothing);
+
+    await tester.scrollUntilVisible(find.text('Ver más'), 300);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ver más'));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(find.text('Movimiento día 8'), 300);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Movimiento día 7'), findsOneWidget);
+    expect(find.text('Movimiento día 8'), findsOneWidget);
+    expect(find.text('Ver más'), findsNothing);
   });
 
   testWidgets('filtra categorías según el tipo seleccionado', (
@@ -1077,6 +1404,34 @@ void main() {
     expect(
       find.byKey(const ValueKey('movement_category_filter_sueldo')),
       findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('movement_category_filter_all')),
+        matching: find.byIcon(Icons.format_list_bulleted),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('movement_category_filter_alimentos')),
+        matching: find.byIcon(Icons.restaurant_outlined),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('movement_category_filter_transporte')),
+        matching: find.byIcon(Icons.directions_car_outlined),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('movement_category_filter_otrosGastos')),
+        matching: find.byIcon(Icons.more_horiz),
+      ),
+      findsOneWidget,
     );
 
     await tester.tap(
