@@ -295,11 +295,59 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text('Ingresos del período'), findsOneWidget);
-    expect(find.text('Gastos del período'), findsOneWidget);
+    final summaryTabs = find.byKey(const ValueKey('summary_section_tabs'));
+    final incomeTab = find.descendant(
+      of: summaryTabs,
+      matching: find.text('Ingresos'),
+    );
+    expect(incomeTab, findsOneWidget);
+    expect(
+      find.descendant(of: summaryTabs, matching: find.text('Gastos')),
+      findsOneWidget,
+    );
+    expect(find.text('Saldos'), findsOneWidget);
+    expect(find.byKey(const ValueKey('summary_section_tabs')), findsOneWidget);
+    expect(find.byKey(const ValueKey('summary_export_menu')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('summary_balance_content')),
+      findsOneWidget,
+    );
     expect(find.text('Saldo del período'), findsOneWidget);
     expect(find.text('0 movimientos en el período'), findsOneWidget);
-    expect(find.text('Sin movimientos en este período.'), findsOneWidget);
+
+    await tester.tap(incomeTab);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('summary_income_content')),
+      findsOneWidget,
+    );
+    expect(find.text('0 ingresos en el período'), findsOneWidget);
+  });
+
+  testWidgets('muestra las opciones de exportación del resumen', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: SummaryScreen(movements: [])),
+      ),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('summary_export_menu')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Exportar todo'), findsOneWidget);
+    expect(find.text('Exportar Gastos'), findsOneWidget);
+    expect(find.text('Exportar Ingresos'), findsOneWidget);
+
+    await tester.tap(find.text('Exportar todo'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('No hay movimientos para exportar en este período.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('restablece Movimientos al volver a tocar su navegación', (
@@ -1555,9 +1603,136 @@ void main() {
 
     expect(find.text('Resumen de Enero $previousYear'), findsOneWidget);
     expect(find.text(r'$ 1.234,56'), findsNWidgets(2));
-    expect(find.text(r'$ 0,00'), findsOneWidget);
     expect(find.text('1 movimiento en el período'), findsOneWidget);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey('summary_section_tabs')),
+        matching: find.text('Gastos'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(r'$ 0,00'), findsOneWidget);
+    expect(find.text('0 gastos en el período'), findsOneWidget);
     expect(find.text('Sin gastos en este período.'), findsOneWidget);
+  });
+
+  testWidgets('compara ingresos y gastos en la pestaña Saldo', (
+    WidgetTester tester,
+  ) async {
+    final currentPeriod = DateTime.now();
+    final movements = [
+      Movimiento(
+        tipo: TipoMovimiento.ingreso,
+        montoEnCentavos: 100000,
+        categoria: CategoriaMovimiento.sueldo,
+        fecha: currentPeriod,
+      ),
+      Movimiento(
+        tipo: TipoMovimiento.gasto,
+        montoEnCentavos: 40000,
+        categoria: CategoriaMovimiento.alimentos,
+        fecha: currentPeriod,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: SummaryScreen(movements: movements)),
+      ),
+    );
+
+    expect(find.text('Saldo del período'), findsOneWidget);
+    expect(find.text(r'$ 600,00'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('summary_income_bar')),
+        matching: find.text('Ingresos'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('summary_expense_bar')),
+        matching: find.text('Gastos'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Los ingresos superaron a los gastos por \$ 600,00.'),
+      findsOneWidget,
+    );
+
+    final incomeBarHeight = tester
+        .getSize(find.byKey(const ValueKey('summary_income_bar_fill')))
+        .height;
+    final expenseBarHeight = tester
+        .getSize(find.byKey(const ValueKey('summary_expense_bar_fill')))
+        .height;
+
+    expect(incomeBarHeight, greaterThan(0));
+    expect(expenseBarHeight / incomeBarHeight, closeTo(0.4, 0.01));
+  });
+
+  testWidgets('compara el saldo con el mes anterior', (
+    WidgetTester tester,
+  ) async {
+    final currentPeriod = DateTime.now();
+    final previousPeriod = DateTime(
+      currentPeriod.year,
+      currentPeriod.month - 1,
+    );
+    final movements = [
+      Movimiento(
+        tipo: TipoMovimiento.ingreso,
+        montoEnCentavos: 80000,
+        categoria: CategoriaMovimiento.sueldo,
+        fecha: previousPeriod,
+      ),
+      Movimiento(
+        tipo: TipoMovimiento.gasto,
+        montoEnCentavos: 30000,
+        categoria: CategoriaMovimiento.alimentos,
+        fecha: previousPeriod,
+      ),
+      Movimiento(
+        tipo: TipoMovimiento.ingreso,
+        montoEnCentavos: 100000,
+        categoria: CategoriaMovimiento.sueldo,
+        fecha: currentPeriod,
+      ),
+      Movimiento(
+        tipo: TipoMovimiento.gasto,
+        montoEnCentavos: 40000,
+        categoria: CategoriaMovimiento.alimentos,
+        fecha: currentPeriod,
+      ),
+    ];
+    final previousPeriodName =
+        '${monthNames[previousPeriod.month - 1]} ${previousPeriod.year}';
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: SummaryScreen(movements: movements)),
+      ),
+    );
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('summary_monthly_comparison')),
+      300,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Comparado con $previousPeriodName'), findsOneWidget);
+    expect(find.text('Saldo anterior'), findsOneWidget);
+    expect(find.text(r'$ 500,00'), findsOneWidget);
+    expect(
+      find.text(
+        'El saldo aumentó en \$ 100,00 (20,0 %) respecto de $previousPeriodName.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.byIcon(Icons.trending_up), findsOneWidget);
   });
 
   testWidgets('muestra el desglose de gastos por categoría', (
@@ -1591,13 +1766,81 @@ void main() {
       ),
     );
 
-    expect(find.text('Gastos por categoría'), findsOneWidget);
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey('summary_section_tabs')),
+        matching: find.text('Gastos'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Distribución por categoría'), findsOneWidget);
+    expect(find.byKey(const ValueKey('summary_expense_pie')), findsOneWidget);
+    expect(
+      tester
+          .getSize(find.byKey(const ValueKey('summary_expense_pie_card')))
+          .width,
+      greaterThan(300),
+    );
     expect(find.text('Alimentos'), findsOneWidget);
+    expect(find.byIcon(Icons.restaurant_outlined), findsOneWidget);
     expect(find.text(r'$ 800,00'), findsOneWidget);
     expect(find.text('2 movimientos · 80,0 %'), findsOneWidget);
     expect(find.text('Transporte'), findsOneWidget);
+    expect(find.byIcon(Icons.directions_car_outlined), findsOneWidget);
     expect(find.text(r'$ 200,00'), findsOneWidget);
     expect(find.text('1 movimiento · 20,0 %'), findsOneWidget);
-    expect(find.byType(LinearProgressIndicator), findsNWidgets(2));
+    expect(find.byType(LinearProgressIndicator), findsNothing);
+  });
+
+  testWidgets('muestra el desglose de ingresos por categoría', (
+    WidgetTester tester,
+  ) async {
+    final currentPeriod = DateTime.now();
+    final movements = [
+      Movimiento(
+        tipo: TipoMovimiento.ingreso,
+        montoEnCentavos: 75000,
+        categoria: CategoriaMovimiento.sueldo,
+        fecha: DateTime(currentPeriod.year, currentPeriod.month, 5),
+      ),
+      Movimiento(
+        tipo: TipoMovimiento.ingreso,
+        montoEnCentavos: 25000,
+        categoria: CategoriaMovimiento.venta,
+        fecha: DateTime(currentPeriod.year, currentPeriod.month, 12),
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: SummaryScreen(movements: movements)),
+      ),
+    );
+
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey('summary_section_tabs')),
+        matching: find.text('Ingresos'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Distribución por categoría'), findsOneWidget);
+    expect(find.byKey(const ValueKey('summary_income_pie')), findsOneWidget);
+    expect(
+      tester
+          .getSize(find.byKey(const ValueKey('summary_income_pie_card')))
+          .width,
+      greaterThan(300),
+    );
+    expect(find.text('Sueldo'), findsOneWidget);
+    expect(find.byIcon(Icons.payments_outlined), findsOneWidget);
+    expect(find.text(r'$ 750,00'), findsOneWidget);
+    expect(find.text('1 movimiento · 75,0 %'), findsOneWidget);
+    expect(find.text('Venta'), findsOneWidget);
+    expect(find.byIcon(Icons.sell_outlined), findsOneWidget);
+    expect(find.text(r'$ 250,00'), findsOneWidget);
+    expect(find.text('1 movimiento · 25,0 %'), findsOneWidget);
   });
 }
