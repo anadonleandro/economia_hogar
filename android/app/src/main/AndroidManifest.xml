@@ -1,8 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="economia_hogar"
+        android:label="Economía del Hogar"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@drawable/ic_launcher_wallet">
         <activity
             android:name=".MainActivity"
             android:exported="true"

@@ -1,4 +1,4 @@
-package com.example.economia_hogar
+package com.anadonleandro.economiahogar
 
 import io.flutter.embedding.android.FlutterActivity
 
